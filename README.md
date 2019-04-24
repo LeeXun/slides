@@ -9,6 +9,8 @@ go get -u -v github.com/leexun/mypresent
 ## Get started
 
 ```
+git clone git@github.com:LeeXun/slides.git
+cd slides
 make
 ```
 
