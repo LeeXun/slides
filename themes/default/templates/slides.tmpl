@@ -1,0 +1,97 @@
+{/* This is the slide template. It defines how presentations are formatted. */}
+
+{{define "root"}}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{.Title}}</title>
+    <meta charset='utf-8'>
+    <script>
+      var notesEnabled = {{.NotesEnabled}};
+    </script>
+    <!--link rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/default.min.css"-->
+    <!--script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script-->
+    <!--link rel="stylesheet"
+      href="./static/vs2015.css"-->
+    <link rel="stylesheet"
+      href="./static/template.css">
+    <script src="./static/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <link rel="stylesheet" type="text/css" href="/static/styles.css">
+    {{if .NotesEnabled}}
+    <script>
+      var sections = {{.Sections}};
+      var titleNotes = {{.TitleNotes}}
+    </script>
+    <script src='/static/notes.js'></script>
+    {{end}}
+    <script src='https://requirejs.org/docs/release/2.3.5/minified/require.js'></script>
+    <script src='/static/jquery.js'></script>
+    <script src='/static/jquery-ui.js'></script>
+    <script src='/static/playground.js'></script>
+    <script src='/static/play.js'></script>
+    <script src='/static/slides.js'></script>
+    <script>
+      window.onload = function() {
+        // initPlayground("SocketTransport");
+      }
+    </script>
+  </head>
+
+  <body style='display: none'>
+
+    <section class='slides layout-widescreen'>
+
+      <article>
+        <p class="landing-title">{{.Title}}</p>
+        {{with .Subtitle}}<h3>{{.}}</h3>{{end}}
+        {{if not .Time.IsZero}}<h3>{{.Time.Format "2 January 2006"}}</h3>{{end}}
+        {{range .Authors}}
+          <div class="presenter">
+            {{range .TextElem}}{{elem $.Template .}}{{end}}
+          </div>
+        {{end}}
+        <div class="article-footer"></div>
+      </article>
+
+  {{range $i, $s := .Sections}}
+  <!-- start of slide {{$s.Number}} -->
+      <article {{$s.HTMLAttributes}}>
+      {{if $s.Elem}}
+        <p class="article-title">{{$s.Title}}</p>
+        {{range $s.Elem}}{{elem $.Template .}}{{end}}
+      {{else}}
+        <p>{{$s.Title}}</p>
+      {{end}}
+      <span class="pagenumber">{{pagenum $s 1}}</span>
+      <div class="article-footer"></div>
+      </article>
+  <!-- end of slide {{$s.Number}} -->
+  {{end}}{{/* of Slide block */}}
+
+    </section>
+
+    <div id="help">
+      Use the left and right arrow keys or click the left and right
+      edges of the page to navigate between slides.<br>
+      (Press 'H' or navigate to hide this message.)
+    </div>
+
+    <script>
+      (function() {
+        // Load Google Analytics tracking code on production site only.
+        if (window["location"] && window["location"]["hostname"] == "talks.golang.org") {
+          var ga = document.createElement("script"); ga.type = "text/javascript"; ga.async = true;
+          ga.src = ("https:" == document.location.protocol ? "https://ssl" : "http://www") + ".google-analytics.com/ga.js";
+          var s = document.getElementsByTagName("script")[0]; s.parentNode.insertBefore(ga, s);
+        }
+      })();
+    </script>
+  </body>
+</html>
+{{end}}
+
+{{define "newline"}}
+<br>
+{{end}}
