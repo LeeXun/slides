@@ -1,0 +1,1388 @@
+Go！
+Presented by Lee Xun
+
+###############################################################################################
+* About me
+```html
+<pre class="code code18">
+<code class="">
+		.---. .--. .---. .--+ .--------. .---. .---   ---.
+		|   |/   / |   |/   / |__    __| |   | \   \ /   /
+		|      <   |      <      |  |    |   |  >       <
+		|   | \  \ |   | \  \    |  |    |   |  /   ^   \
+		.---+ ---+ +---+ ---+    |__|    |___| |___/ \___|
+</code>
+</pre>
+<p class="slogan bold">李洵 Lee Xun</p>
+<p class="slogan bold" style="font-size:22px;">SRE + DevOps</p>
+<p class="slogan bold" style="font-size:22px;"></p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">同個瞬間，可以有多少人？</p>
+```htmlend
+
+###############################################################################################
+* _
+https://sourcegraph.com/github.com/php/php-src/-/commit/ebf4ffc9354f316f19c839a114b26a564033708a
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">當時被 Go 吸引的原因</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Goroutine</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Assembly</p>
+```htmlend
+
+###############################################################################################
+* C 的 helloworld!
+```html
+<pre class="code code22">
+<code class="">
+  int main()
+  {
+    printf("Hello, 世界\n");
+    return 0;
+  }
+</code>
+</pre>
+<pre class="code code22">
+<code class="">
+  0x00000000004004e7 <+0>:	push   %rbp
+  0x00000000004004e8 <+1>:	mov    %rsp,%rbp
+  0x00000000004004eb <+4>:	lea    0x92(%rip),%rdi # 0x400584
+  0x00000000004004f2 <+11>:	callq  0x4003f0 <puts@plt>
+  0x00000000004004f7 <+16>:	mov    $0x0,%eax
+  0x00000000004004fc <+21>:	pop    %rbp
+  0x00000000004004fd <+22>:	retq  
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">有趣的是</p>
+```htmlend
+
+###############################################################################################
+* Go 的 helloworld!
+```html
+<pre class="code code22">
+<code class="">
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, 世界")
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* . . .
+```html
+<pre class="code code18">
+<code class="">
+0x00000000004871b0 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+0x00000000004871b9 <+9>:	cmp    0x10(%rcx),%rsp
+0x00000000004871bd <+13>:	jbe    0x487230 # main.main+128
+0x00000000004871bf <+15>:	sub    $0x58,%rsp
+0x00000000004871c3 <+19>:	mov    %rbp,0x50(%rsp)
+0x00000000004871c8 <+24>:	lea    0x50(%rsp),%rbp
+0x00000000004871cd <+29>:	xorps  %xmm0,%xmm0
+0x00000000004871d0 <+32>:	movups %xmm0,0x40(%rsp)
+0x00000000004871d5 <+37>:	lea    0x11204(%rip),%rax        # 0x4983e0
+0x00000000004871dc <+44>:	mov    %rax,0x40(%rsp)
+0x00000000004871e1 <+49>:	lea    0x485d8(%rip),%rax        # 0x4cf7c0 main.statictmp_0
+0x00000000004871e8 <+56>:	mov    %rax,0x48(%rsp)
+0x00000000004871ed <+61>:	nop
+0x00000000004871ee <+62>:	mov    0xd05fb(%rip),%rax        # 0x5577f0 os.Stdout
+0x00000000004871f5 <+69>:	lea    0x49ac4(%rip),%rcx        # 0x4d0cc0 go.itab.*os.File,io.Writer
+0x00000000004871fc <+76>:	mov    %rcx,(%rsp)
+0x0000000000487200 <+80>:	mov    %rax,0x8(%rsp)
+0x0000000000487205 <+85>:	lea    0x40(%rsp),%rax
+0x000000000048720a <+90>:	mov    %rax,0x10(%rsp)
+0x000000000048720f <+95>:	movq   $0x1,0x18(%rsp)
+0x0000000000487218 <+104>:	movq   $0x1,0x20(%rsp)
+0x0000000000487221 <+113>:	callq  0x480b60  # fmt.Fprintln
+0x0000000000487226 <+118>:	mov    0x50(%rsp),%rbp
+0x000000000048722b <+123>:	add    $0x58,%rsp
+0x000000000048722f <+127>:	retq   
+0x0000000000487230 <+128>:	callq  0x44f340 # runtime.morestack_noctxt
+0x0000000000487235 <+133>:	jmpq   0x4871b0 # main.main
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Stack or Heap</p>
+```htmlend
+
+###############################################################################################
+* 這好像哪裡有點神奇
+```html
+<pre class="code code18">
+<code class="go">
+func newA() *int {
+	var a int = 0
+	return &a
+}
+
+func newB() *int {
+	var b int = 1
+	return &b
+}
+
+func main() {
+	a := newA()
+	b := newB()
+	fmt.Printf("%v\n", *a)
+	fmt.Printf("%v\n", *b)
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In C
+```html
+<pre class="code code18">
+<code class="c">
+int *newA() {
+  int a = 0;
+  return &a;
+}
+
+int *newB() {
+  int b = 1;
+  return &b;
+}
+
+int main() {
+  int *a = newA();
+  int *b = newB();
+  printf("a: %d\n", *a);
+  printf("b: %d\n", *b);
+  return 0;
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In C
+```html
+<pre class="code code18">
+<code class="c">
+int *newA() {
+  int a = 0;
+  return &a;
+}
+
+int *newB() {
+  int b = 1;
+  return &b;
+}
+
+int main() {
+  int *a = newA();
+  int *b = newB();
+  printf("a: %d\n", *a); // a: 1
+  printf("b: %d\n", *b); // b: 1490617567
+  return 0;
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In Go
+```html
+<pre class="code code18">
+<code class="go">
+func newA() *int {
+	var a int = 0
+	return &a
+}
+
+func newB() *int {
+	var b int = 1
+	return &b
+}
+
+func main() {
+	a := newA()
+	b := newB()
+	fmt.Printf("%v\n", *a)   // a: 0
+	fmt.Printf("%v\n", *b)   // a: 1
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">What happened?</p>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="armasm">
+  high   +-------+
+         |  ...  |
+         +-------+
+         |  ...  |
+         +-------+           int *newA() {
+         |  ...  |               int a = 0; // loc1
+         +-------+               return &a;
+         |ret(&a)|           }
+         +-------+
+         | readdr|
+         +-------+
+         |   BP  |
+         +-------+
+         | a = 0 | 
+         +-------+ <- &a = 0x7ffeec3156dc
+         |  ...  | 
+  low    +-------+ 
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="armasm">
+  high   +-------+ 
+         |  xxxx |
+         +-------+
+         |  xxxx |
+         +-------+
+         |  xxxx |
+         +-------+
+         |ret(&a)|
+         +-------+  function 已經結束
+         | readdr|
+         +-------+
+         |   BP  |
+         +-------+
+         | a = 0 | 
+         +-------+ <- &a 這還能用嗎？
+         |  xxxx | 
+  low    +-------+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="armasm">
+  high   +-------+
+         |  ...  |
+         +-------+
+         |  ...  |
+         +-------+           int *newB() {
+         |  ...  |               int b = 1; // loc1
+         +-------+               return &b;
+         |ret(&b)|           }
+         +-------+
+         | readdr|
+         +-------+
+         |   BP  |
+         +-------+
+         | b = 1 | 
+         +-------+ <- &b = 0x7ffeec3156dc 這個位址又被用走了
+         |  ...  |         之後又會被 printf 之後的用髒: 1490617567
+  low    +-------+ 
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In Go
+```html
+<pre class="code code18">
+<code class="go">
+func newA() *int {
+	var a int = 0
+	return &a
+}
+
+func newB() *int {
+	var b int = 1
+	return &b
+}
+
+func main() {
+	a := newA()
+	b := newB()
+	fmt.Printf("%v\n", *a)   // a: 0
+	fmt.Printf("%v\n", *b)   // a: 1
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="">
+   go tool compile -m main.go
+// main.go:5:6: can inline X
+// main.go:10:6: can inline ChangeX
+// main.go:15:8: inlining call to X
+// main.go:16:9: inlining call to ChangeX
+// main.go:17:12: inlining call to fmt.Printf
+   main.go:7:9: &x escapes to heap            <- escape to heap!!!!
+   main.go:6:6: moved to heap: x
+// main.go:10:14: ChangeX xp does not escape
+// main.go:17:21: *x escapes to heap
+// main.go:17:12: io.Writer(os.Stdout) escapes to heap
+// main.go:15:8: main &x does not escape
+// main.go:17:12: main []interface {} literal does not escape
+// <autogenerated>:1: os.(*File).close .this does not escape
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Twitch heap
+.image imgs/twitch_heap.png 480 _
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">從組合語言開始</p>
+```htmlend
+#如果太複雜算不出來，那就用 go tool objdump, go vet
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">怎麼開始？</b></p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">偷看 goroutine 的 id</b></p>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/runtime2.go
+type g struct {
+	stack       stack   // offset known to runtime/cgo
+	stackguard0 uintptr // offset known to liblink
+	stackguard1 uintptr // offset known to liblink
+
+	_panic         *_panic // innermost panic - offset known to liblink
+	_defer         *_defer // innermost defer
+	m              *m      // current m; offset known to arm liblink
+	sched          gobuf
+	syscallsp      uintptr        
+	syscallpc      uintptr        
+	stktopsp       uintptr // expected sp at top of stack, to check in traceback
+	param          unsafe.Pointer // passed parameter on wakeup
+	atomicstatus   uint32
+	stackLock      uint32 // sigprof/scang lock; TODO: fold in to atomicstatus
+底加 ->	goid           int64  
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stubs.go
+package runtime
+
+import "unsafe"
+
+// Should be a built-in for unsafe.Pointer?
+//go:nosplit
+func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
+	return unsafe.Pointer(uintptr(p) + x)
+}
+
+// getg returns the pointer to the current g.
+// The compiler rewrites calls to this function into instructions
+// that fetch the g directly (from TLS or from the dedicated register).
+func getg() *g <- 底加
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">？？ func getg() *g ？？</p>
+<p class="slogan bold">所以我說那個 body 呢</b></p>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// src/cmd/compile/internal/amd64/ssa.go
+	case ssa.OpAMD64LoweredGetG:   <- GetG!!!!
+		r := v.Reg()
+		// See the comments in cmd/internal/obj/x86/obj6.go
+		// near CanUse1InsnTLS for a detailed explanation of these instructions.
+		if x86.CanUse1InsnTLS(gc.Ctxt) { <- 可以只用一個指令就拿到 TLS
+			// MOVQ (TLS), r  
+			p := s.Prog(x86.AMOVQ)
+			p.From.Type = obj.TYPE_MEM
+			p.From.Reg = x86.REG_TLS
+			p.To.Type = obj.TYPE_REG
+			p.To.Reg = r
+		} else {                         <- 不行
+			// MOVQ TLS, r
+			// MOVQ (r)(TLS*1), r
+			p := s.Prog(x86.AMOVQ)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* TLS, Thread local storage
+```html
+<ul>
+  <li>用意：利用 static or global memory 去儲存狀態</li>
+  <li>Go 的 G,M,P 模型中 M 就相當於 thread</li>
+  <li>Linux, libc pthread</li>
+  <ul>
+    <li>pthread_key_create, pthread_key_delete</li>
+  </ul>
+  <li>Windows</li>
+  <ul>
+    <li>TlsGetValue, TlsSetValue</li>
+  </ul>
+</ul>
+```htmlend
+.caption [[https://en.wikipedia.org/wiki/Win32_Thread_Information_Block][Win32 TIB TEB]]
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Plan 9</p>
+```htmlend
+
+###############################################################################################
+* Plan9 的指令操作方向
+```html
+<pre class="code code22">
+<code class="armasm">
+
+         plan9                            intel 
+           |                                | 
+      MOVQ $0x10, AX                   mov rax, 0x10
+           |------>                         <-----|
+
+
+       ; 和 AT&T 類似                     ; 和 intel 相反
+
+</code>
+</pre>
+```htmlend
+.caption 凡事都以例外，好奇的話請看 [[https://quasilyte.dev/blog/files/x86_2.csv][完整列表]]
+```html
+<ul>
+  <li>gdb 可以用 set disassembly-flavor intel 把他從 AT&T 改顯示 intel</li>
+  <li>為了不讓大家轉換得太辛苦，後面的 gdb 例子都是用 AT&T</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code>
+// main_amd64.s
+ #include "funcdata.h"
+ #include "textflag.h"
+
+ #define get_tls(r)	MOVQ TLS, r
+ #define g(r)		0(r)(TLS*1)	<- TLS, Thread local storage
+ #define g_goid(r)	152(r)		<- 152 是哪裡來的？
+
+ TEXT ·getgoid(SB),NOSPLIT,$0
+	 get_tls(CX)
+	 MOVQ	g(CX), AX        <- 先到 g
+	 MOVQ	g_goid(AX), AX   <- 再從 g 到 goid
+	 MOVQ	AX, ret+0(FP)    
+	 RET
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// main.go
+func getgoid() int64 // 不用 body
+
+func routine() {
+	// 這邊故意讓他 panic，看我們抓到的對不對
+	panic(fmt.Sprintf("getgoid: %d\n", getgoid()))
+	time.Sleep(time.Second * 1)
+}
+
+func main() {
+	go routine()
+	for {
+		time.Sleep(time.Second * 1)
+		fmt.Printf("0: %x\n", getgoid())
+	}
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="">
+panic: getgoid: 18           <- 讚喔！
+
+goroutine 18 [running]:      <-
+//main.routine()
+//	/root/lab/40gomeetup/code/getg/main.go:13 +0x111
+//created by main.main
+//	/root/lab/40gomeetup/code/getg/main.go:18 +0x47
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 至於那個 152 是怎麼來的？
+```html
+<pre class="code code20">
+<code class="go">
+// src/runtime/runtime2/go
+type stack struct { // *2
+	lo uintptr
+	hi uintptr
+}
+
+type gobuf struct { // *7
+	sp   uintptr
+	pc   uintptr
+	g    guintptr // type guintptr uintptr
+	ctxt unsafe.Pointer
+	ret  sys.Uintreg // type Uintreg uint64 看平台
+	lr   uintptr
+	bp   uintptr // for GOEXPERIMENT=framepointer
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 至於那個 152 是怎麼來的？
+```html
+<pre class="code code20">
+<code class="go">
+// src/runtime/runtime2/go
+type g struct { // 2+7+1+9 = 19*8 = 152
+	stack       stack   // 2
+	stackguard0 uintptr // 1
+	stackguard1 uintptr // 1
+
+	_panic         *_panic 	 // 1
+	_defer         *_defer 	 // 1
+	m              *m 	 // 1
+	sched          gobuf	 // 7
+	syscallsp      uintptr	 // 1        
+	syscallpc      uintptr	 // 1
+	stktopsp       uintptr	 // 1        
+	param          unsafe.Pointer // 1
+	atomicstatus   uint32 // 0.5
+	stackLock      uint32 // 0.5
+	goid           int64  <- 底加
+  //...
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10">其實編譯原始碼時</p>
+<p class="slogan">有個檔案叫做 go_asm.h</p>
+```htmlend
+
+###############################################################################################
+* _
+.image imgs/goasm.png
+
+###############################################################################################
+* 官方文件的雷
+.image imgs/asm_doc.png 350 _
+.caption 是在 go_tls.h，不是 go_asm.h，而且 go_asm.h 在編譯完就被刪除了
+
+###############################################################################################
+* PR 後官方的回應
+.image imgs/pr_response.png 480 _
+
+###############################################################################################
+* Let's try this
+.monaco ./code/deadloop.go
+
+# 這邊要 demo
+#1. 加多點 deadloop -> 不能跑
+#1. 加上 f() var a[1<<20]byte a[1] = 1 -> 可以跑
+#1  //go:onsplit 不能跑
+###############################################################################################
+
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="armasm">
+; src/runtime/asm_amd64.s
+
+	MOVL	16(SP), AX		// copy argc
+	MOVL	AX, 0(SP)
+	MOVQ	24(SP), AX		// copy argv
+	MOVQ	AX, 8(SP)
+	CALL	runtime·args(SB)
+	CALL	runtime·osinit(SB)  <- 底加
+	CALL	runtime·schedinit(SB)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/os_linux.go
+  func osinit() {
+	  ncpu = getproccount()   <- 底加
+  }
+  // src/runtime/proc.go:func schedinit
+  //...
+  procs := ncpu
+  if n, ok := atoi32(gogetenv("GOMAXPROCS")); ok && n > 0 {
+    procs = n
+  }
+  if procresize(procs) != nil {  <- 用 procs 底加
+    throw("unknown runnable goroutine during bootstrap")
+  }
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/proc.go
+// Change number of processors. The world is stopped, sched is locked.
+func procresize(nprocs int32) *p {
+	old := gomaxprocs
+	if old < 0 || nprocs <= 0 {
+		throw("procresize: invalid arg")
+	}
+	//...  
+	// initialize new P's
+	for i := old; i < nprocs; i++ {  <- 從 old 開始
+		pp := allp[i]
+		if pp == nil {
+			pp = new(p)  <- new p
+		}
+		pp.init(i)
+		atomicstorep(unsafe.Pointer(&allp[i]), unsafe.Pointer(pp))
+	}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+func getproccount() int32 {
+	const maxCPUs = 64 * 1024
+	var buf [maxCPUs / 8]byte
+	r := sched_getaffinity(0, unsafe.Sizeof(buf), &buf[0])
+	if r < 0 {
+		return 1
+	}
+	n := int32(0)
+	for _, v := range buf[:r] {
+		for v != 0 {
+			n += int32(v & 1)
+			v >>= 1
+		}
+	}
+	if n == 0 {
+		n = 1
+	}
+	return n
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+func getproccount() int32 {
+	// This buffer is huge (8 kB) but we are on the system stack
+	// and there should be plenty of space (64 kB).
+	// Also this is a leaf, so we're not holding up the memory for long.
+	// See golang.org/issue/11823.
+	// The suggested behavior here is to keep trying with ever-larger
+	// buffers, but we don't have a dynamic memory allocator at the
+	// moment, so that's a bit tricky and seems like overkill.
+	const maxCPUs = 64 * 1024
+	var buf [maxCPUs / 8]byte  <- 8kb
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="armasm">
+// src/runtime/sys_linux_amd64.s
+TEXT runtime·sched_getaffinity(SB),NOSPLIT,$0
+	MOVQ	pid+0(FP), DI
+	MOVQ	len+8(FP), SI
+	MOVQ	buf+16(FP), DX
+	MOVL	$SYS_sched_getaffinity, AX
+	SYSCALL
+	MOVL	AX, ret+24(FP)
+	RET
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="">
+int sched_getaffinity(pid_t pid, size_t cpusetsize,
+                      cpu_set_t *mask);
+		
+This manual page describes the glibc interface for the CPU affinity calls. 
+The actual system call interface is slightly different, with the mask being 
+typed as unsigned long *, reflecting the fact that the underlying implementation 
+of CPU sets is a simple bit mask. On success, the raw sched_getaffinity() system 
+call returns the size (in bytes) of the cpumask_t data type that is used internally
+by the kernel to represent the CPU set bit mask.
+
+	- https://linux.die.net/man/2/sched_getaffinity
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="">
+int sched_getaffinity(pid_t pid, size_t cpusetsize,
+                      cpu_set_t *mask);
+
+This manual page describes the glibc interface for the CPU affinity calls. 
+The actual system call interface is slightly different, with the mask being 
+typed as unsigned long *, reflecting the fact that the underlying implementation 
+of CPU sets is a simple bit mask. On success, the raw sched_getaffinity() system 
+call returns the size (in bytes) of the cpumask_t data type that is used internally
+by the kernel to represent the CPU set bit mask.
+
+	- https://linux.die.net/man/2/sched_getaffinity
+
+	簡單來說就是 glibc interface 和 raw system call 回傳的東西不一樣。
+	glibc 要給一個 cpu mask 指標去拿，但實際上的 system call 會回傳 bit mask size。
+	所以 go 裡面的才能夠拿到回傳的 size 去做 buffer 做 slice。
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">簡單來說結果就是長這樣</p>
+<p class="slogan bold">[3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">3>>1 = 1</p>
+<p class="slogan bold">1>>1 = 0</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">結果就是兩個 P</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">還沒結束！</p>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/os_darwin.go
+// BSD interface for threading.
+func osinit() {
+	// pthread_create delayed until end of goenvs so that we
+	// can look at the environment first.
+
+	ncpu = getncpu()
+	physPageSize = getPageSize()
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/os_darwin.go
+func getncpu() int32 {
+	// Use sysctl to fetch hw.ncpu.   <- 貼心註解  sysctl hw.ncpu
+	mib := [2]uint32{_CTL_HW, _HW_NCPU}
+	out := uint32(0)
+	nout := unsafe.Sizeof(out)
+	ret := sysctl(&mib[0], 2, (*byte)(unsafe.Pointer(&out)), &nout, nil, 0)
+	if ret >= 0 && int32(out) > 0 {
+		return int32(out)
+	}
+	return 1
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* MoreStack
+```html
+<pre class="code code18">
+<code class="go">
+func f() {
+	var a [1 << ???]byte   <- ???
+	a[0] = 0
+}
+
+func deadloop() {
+	for {
+		f()
+	}
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* MoreStack 12
+```html
+<pre class="code code18">
+<code class="armasm">
+// var a [1 << 12]byte // 4096 B
+	 Dump of assembler code for function main.f:
+   0x0000000000489310 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x0000000000489319 <+9>:	mov    0x10(%rcx),%rsi   <- 0x10(%rcx) 是什麼？
+   0x000000000048931d <+13>:	cmp    $0xfffffffffffffade,%rsi <- 0xfffffffffffffade ?
+   0x0000000000489324 <+20>:	je     0x489372 # main.f+98
+   0x0000000000489326 <+22>:	lea    0x370(%rsp),%rax
+   0x000000000048932e <+30>:	sub    %rsi,%rax
+   0x0000000000489331 <+33>:	cmp    $0x12f8,%rax
+   0x0000000000489337 <+39>:	jbe    0x489372 # main.f+98
+	 ...
+   0x000000000048936a <+90>:	add    $0x1008,%rsp
+   0x0000000000489371 <+97>:	retq   
+   0x0000000000489372 <+98>:	callq  0x44fb30 # runtime.morestack_noctxt
+   0x0000000000489377 <+103>:	jmp    0x489310 # main.f
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+.image imgs/goasm.png
+
+###############################################################################################
+* StackGuard
+```html
+<pre class="code code22">
+<code class="c">
+
+high   +-------------+
+       |    Args     |
+       |    stack    |
+       |     ˇˇˇ     |
+       |             | <- old %rsp
+       |             |
+       | stackguard0 | 
+       |     ...     | <- 如果 new %rsp 超過 guard0
+       | stackguard1 |   
+       |    heap     |
+       |    uinit    |
+       |    init     |
+       |    Text     |
+low    +-------------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* MoreStack 11
+```html
+<pre class="code code18">
+<code class="armasm">
+// var a [1 << 11]byte // 2048 B 
+>>> disas main.f
+Dump of assembler code for function main.f:
+   0x0000000000489310 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x0000000000489319 <+9>:	lea    -0x788(%rsp),%rax
+   0x0000000000489321 <+17>:	cmp    0x10(%rcx),%rax
+   0x0000000000489325 <+21>:	jbe    0x489360 # main.f+80
+   0x0000000000489327 <+23>:	sub    $0x808,%rsp
+               0x808 = 16*16*8 + 16*0 + 8 = 2048 + 8 (這是 BP，有緣再講)
+	 ...         所以 0x808 - 0x788 = 0x80 這是啥？
+
+   0x0000000000489358 <+72>:	add    $0x808,%rsp
+   0x000000000048935f <+79>:	retq   
+   0x0000000000489360 <+80>:	callq  0x44fb30 # runtime.morestack_noctxt
+	 0x0000000000489365 <+85>:	jmp    0x489310 # main.f
+	 End of assembler dump.
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+.image imgs/trackstacksize.png 250 _
+
+###############################################################################################
+* MoreStack 2
+```html
+<pre class="code code18">
+<code class="armasm">
+// var a [1 << 2]byte
+>>> disas main.f
+Dump of assembler code for function main.f:
+   0x0000000000489310 <+0>:	sub    $0x10,%rsp     <- 根本沒有檢查 XD
+   0x0000000000489314 <+4>:	mov    %rbp,0x8(%rsp)
+   0x0000000000489319 <+9>:	lea    0x8(%rsp),%rbp
+   0x000000000048931e <+14>:	movl   $0x0,0x4(%rsp)
+   0x0000000000489326 <+22>:	movb   $0x2,0x4(%rsp)
+   0x000000000048932b <+27>:	mov    0x8(%rsp),%rbp
+   0x0000000000489330 <+32>:	add    $0x10,%rsp
+   0x0000000000489334 <+36>:	retq   
+End of assembler dump.
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">runtime.morestack_noctxt</p>
+```htmlend
+
+###############################################################################################
+* MoreStack
+```html
+<pre class="code code18">
+<code class="armasm">
+// morestack but not preserving ctxt.
+
+TEXT runtime·morestack_noctxt(SB),NOSPLIT,$0
+	MOVL	$0, DX
+	JMP	runtime·morestack(SB)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* MoreStack
+```html
+<pre class="code code18">
+<code class="armasm">
+NEEDCTXT = 64
+<br>
+(For TEXT items.)
+<br>
+This function is a closure so it uses its incoming context register.
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Closure
+```html
+<pre class="code code18">
+<code class="go">
+func adder() func(int) int {
+	sum := 0
+	return func(x int) int { <- closure
+		sum += x
+		return sum
+	}
+}
+
+func main() {
+	pos, neg := adder(), adder()
+	for i := 0; i < 10; i++ {
+		fmt.Println(
+			pos(i),
+			neg(-2*i),
+		)
+	}
+}
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* MoreStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/cmd/internal/obj/x86/obj6.go
+	// ...
+	morestack := "runtime.morestack"
+	switch {
+	case cursym.CFunc():
+		morestack = "runtime.morestackc"
+	case !cursym.Func.Text.From.Sym.NeedCtxt():  <- 不是 closure，不需要
+		morestack = "runtime.morestack_noctxt"
+	}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* MoreStack
+```html
+<pre class="code code18">
+<code class="armasm">
+TEXT runtime·morestack(SB),NOSPLIT,$0-0
+	// Cannot grow scheduler stack (m->g0).
+	get_tls(CX)
+	MOVQ	g(CX), BX
+	MOVQ	g_m(BX), BX
+	MOVQ	m_g0(BX), SI
+	CMPQ	g(CX), SI <- 是不是 g0
+	JNE	3(PC) <- 如果不是 g0 就跳三行 (( 跳過下面兩行
+	CALL	runtime·badmorestackg0(SB) <- 在 schedule stack
+	CALL	runtime·abort(SB)
+	...
+	MOVQ	m_g0(BX), BX
+	MOVQ	BX, g(CX)
+	MOVQ	(g_sched+gobuf_sp)(BX), SP
+	CALL	runtime·newstack(SB)    <- newstack!!
+	CALL	runtime·abort(SB)	// crash if newstack returns
+	RET
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+var maxstacksize uintptr = 1 << 20
+// ...
+func newstack() {
+	thisg := getg()
+	// TODO: double check all gp. shouldn't be getg().
+	// ...
+	gp := thisg.m.curg  <- 得讓 m 來記住，不然換新時會消失
+	// ...
+		// Allocate a bigger segment and move the stack.
+	oldsize := gp.stack.hi - gp.stack.lo
+	newsize := oldsize * 2  <- 每次長大長兩倍
+	if newsize > maxstacksize {
+		print("runtime: goroutine stack exceeds ", maxstacksize, "-byte limit\n")
+		throw("stack overflow")
+	}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+// ...
+func newstack() {
+	thisg := getg()
+	// ...
+	gp := thisg.m.curg
+	// ...
+	preempt := atomic.Loaduintptr(&gp.stackguard0) == stackPreempt
+	// ...
+		if preempt {
+		if thisg.m.locks != 0 || thisg.m.mallocing != 0
+		 || thisg.m.preemptoff != "" 
+		 || thisg.m.p.ptr().status != _Prunning {
+			// Let the goroutine keep running for now.
+			// gp->preempt is set, so it will be preempted next time.
+			gp.stackguard0 = gp.stack.lo + _StackGuard
+			gogo(&gp.sched) // never return
+		}
+	}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+const (
+	uintptrMask = 1<<(8*sys.PtrSize) - 1
+
+	// Goroutine preemption request.
+	// Stored into g->stackguard0 to cause split stack check failure.
+	// Must be greater than any real sp.
+	// 0xfffffade in hex.            <- 剛剛看到的那個
+	stackPreempt = uintptrMask & -1314
+
+	// Thread is forking.
+	// Stored into g->stackguard0 to cause split stack check failure.
+	// Must be greater than any real sp.
+	stackFork = uintptrMask & -1234
+)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+	if preempt {
+		if gp == thisg.m.g0 {
+			throw("runtime: preempt g0")
+		}
+		if thisg.m.p == 0 && thisg.m.locks == 0 {
+			throw("runtime: g is running but p is not")
+		}
+		// Synchronize with scang.
+		casgstatus(gp, _Grunning, _Gwaiting)
+		// ...
+		// Act like goroutine called runtime.Gosched.
+		casgstatus(gp, _Gwaiting, _Grunning)
+		gopreempt_m(gp) // never return  <- 就算正在跑還是處理一下就給插隊
+	}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 總結
+```html
+<ul>
+  <li>就算程式裡面真的形成 deadloop or long waiting task</li>
+	<li>區域變數 >= 4KBi</li>
+	<ul>
+		<li>強制進入 morestack</li>
+		<li>被插隊 Yes</li>
+  </ul>
+	<li>128B <= 區域變數 < 4KBi</li>
+	<ul>
+		<li>可能進入 morestack</li>
+		<li>被插隊 Yes</li>
+  </ul>
+  <li>區域變數 < 128B</li>
+	<ul>
+		<li>不會進入 morestack</li>
+		<li>被插隊 No</li>
+  </ul>
+</ul>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">為什麼 morestack 要放在最後面</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<pre class="code code18">
+<code class="armasm">
+// var a [1 << 11]byte // 2048 B 
+>>> disas main.f
+Dump of assembler code for function main.f:
+   0x0000000000489310 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x0000000000489319 <+9>:	lea    -0x788(%rsp),%rax
+   0x0000000000489321 <+17>:	cmp    0x10(%rcx),%rax
+   0x0000000000489325 <+21>:	jbe    0x489360 # main.f+80
+   0x0000000000489327 <+23>:	sub    $0x808,%rsp
+
+	 ...         
+
+   0x0000000000489358 <+72>:	add    $0x808,%rsp
+   0x000000000048935f <+79>:	retq   
+   0x0000000000489360 <+80>:	callq  0x44fb30 # runtime.morestack_noctxt <-- 最後面
+	 0x0000000000489365 <+85>:	jmp    0x489310 # main.f
+	 End of assembler dump.
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Static branch prediction</p>
+```htmlend
+.caption [[https://github.com/golang/go/commit/f4b48de3ad8d9f4f2495acc7cd7d54775b0d101f][Source]]
+
+###############################################################################################
+* _
+```html
+<pre class="code code18">
+<code class="armasm">
+// var a [1 << 11]byte // 2048 B <- 其實不太容易用到這麼大的變數
+>>> disas main.f
+Dump of assembler code for function main.f:
+   0x0000000000489310 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x0000000000489319 <+9>:	lea    -0x788(%rsp),%rax
+   0x0000000000489321 <+17>:	cmp    0x10(%rcx),%rax
+   0x0000000000489325 <+21>:	jbe    0x489360 # main.f+80
+   0x0000000000489327 <+23>:	sub    $0x808,%rsp
+
+	 ...         
+
+   0x0000000000489358 <+72>:	add    $0x808,%rsp
+   0x000000000048935f <+79>:	retq   
+   0x0000000000489360 <+80>:	callq  0x44fb30 # runtime.morestack_noctxt <-- 用到機會小
+   0x0000000000489365 <+85>:	jmp    0x489310 # main.f
+   End of assembler dump.
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Stack
+```html
+<ul>
+  <li>其他還有</li>
+  <ul>
+		<li>stackinit</li>
+    <li>copystack</li>
+		<li>shrinkstack</li>
+		<li>stackpoolalloc</li>
+		<li>stackpoolfree</li>
+		<li>...</li>
+  </ul>
+</ul>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">有聽說 stack 是在 heap 上</p>
+```htmlend
+
+###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+//go:systemstack
+func stackalloc(n uint32) stack {
+		// ...
+		if s == nil {
+			// Allocate a new stack from the heap.
+	在 heap 上->	s = mheap_.allocManual(npage, &memstats.stacks_inuse)
+			if s == nil {
+				throw("out of memory")
+			}
+			osStackAlloc(s)
+			s.elemsize = uintptr(n)
+		}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">至於 Heap</p>
+<p class="slogan bold">那又是另一個故事了 XD</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">blog.leexun.tw</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Thanks!</p>
+```htmlend
