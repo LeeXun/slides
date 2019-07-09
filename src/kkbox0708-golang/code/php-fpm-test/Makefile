@@ -2,7 +2,7 @@ all: help
 
 ## Start siege
 siege:
-	siege -c 512 -r 100 -v http://127.0.0.1/index.php
+	siege -c 4 -r 1 -v http://127.0.0.1/index.php
 
 ## Start php
 php:

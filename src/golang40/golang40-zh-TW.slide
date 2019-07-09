@@ -651,7 +651,7 @@ type g struct { // 2+7+1+9 = 19*8 = 152
 
 ###############################################################################################
 * Let's try this
-.monaco ./code/deadloop.go
+.monaco ./code/deadloop/main.go
 
 # 這邊要 demo
 #1. 加多點 deadloop -> 不能跑
