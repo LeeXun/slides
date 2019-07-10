@@ -335,6 +335,20 @@ func main() {
 ```htmlend
 
 ###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">併發 Concurrency</p>
+<p class="slogan slogan bold">平行 Parallelism</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10" style="font-size: 32px">Concurrency is about <u><b>dealing with</b></u> lots of things at once.</p>
+<p class="slogan slogan" style="font-size: 32px">Parallelism is about <u><b>doing</b></u> lots of things at once.</p>
+```htmlend
+
+###############################################################################################
 * PHP
 .image imgs/php_sleep.png 840 _
 
@@ -390,13 +404,14 @@ struct mm_struct {
 	/* ... */
 }
 
-// https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/sched.h#L634
-// https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/mm_types.h#L354
-// https://sourcegraph.com/github.com/torvalds/linux/-/blob/arch/x86/include/asm/processor.h#L440:1
-// https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/createthread.c.html#103
 </code>
 </pre>
 ```htmlend
+
+.caption [[https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/sched.h#L634][https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/sched.h#L634]]
+.caption [[https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/mm_types.h#L354][https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/mm_types.h#L354]]
+.caption [[https://sourcegraph.com/github.com/torvalds/linux/-/blob/arch/x86/include/asm/processor.h#L440:1][https://sourcegraph.com/github.com/torvalds/linux/-/blob/arch/x86/include/asm/processor.h#L440:1]]
+.caption [[https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/createthread.c.html#103][https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/createthread.c.html#103]]
 
 ###############################################################################################
 * Process and Thread
@@ -436,18 +451,6 @@ struct thread_struct {
 
 </code>
 </pre>
-```htmlend
-
-###############################################################################################
-* _
-```html
-<p class="slogan slogan-15 bold">Golang 怎麼做？</p>
-```htmlend
-
-###############################################################################################
-* _
-```html
-<p class="slogan slogan-15 bold">Goroutine</p>
 ```htmlend
 
 ###############################################################################################
@@ -508,6 +511,63 @@ struct thread_struct {
 ```htmlend
 
 ###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Golang 怎麼做？</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Goroutine？Coroutine？</p>
+```htmlend
+
+###############################################################################################
+* Coroutine
+```html
+<pre class="code code18">
+<code class="c">
+// http://blog.linux.org.tw/~jserv/archives/001848.html
+
+static int state = 0;
+
+static void user_thread_1()
+{
+    state = 0;
+    for ( ; ; ) {
+        printf("1\n");
+        state += 1;
+        if (state > 10) {
+            return;
+        }
+    }
+}
+
+static void user_thread_2()
+{
+    state = 0;
+    for ( ; ; ) {
+        printf("2\n");
+        state += 1;
+        if (state > 10) {
+            return;
+        }
+    }
+}
+
+int main() 
+{
+  for ( ; ; ) {
+    user_thread_1();
+    user_thread_2();
+  }
+  return 0;
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
 * Goroutine
 ```html
 <pre class="code code18">
@@ -530,13 +590,6 @@ struct thread_struct {
 </code>
 </pre>
 ```htmlend
-
-###############################################################################################
-* Why many to many?
-.image imgs/goroutine2.png 120 _
-.image imgs/goroutine2.png 120 _
-.image imgs/goroutine2.png 120 _
-.image imgs/goroutine2.png 120 _
 
 ###############################################################################################
 * Why many to many?
@@ -601,6 +654,189 @@ echo 'use ' . (microtime(true) - $s) . ' s';
 #1. 加上 f() var a[1<<20]byte a[1] = 1 -> 可以跑
 #1  //go:onsplit 不能跑
 
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="armasm">
+; src/runtime/asm_amd64.s
+
+	MOVL	16(SP), AX		// copy argc
+	MOVL	AX, 0(SP)
+	MOVQ	24(SP), AX		// copy argv
+	MOVQ	AX, 8(SP)
+	CALL	runtime·args(SB)
+	CALL	runtime·osinit(SB)  <- 底加
+	CALL	runtime·schedinit(SB)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/os_linux.go
+  func osinit() {
+	  ncpu = getproccount()   <- 底加
+  }
+  // src/runtime/proc.go:func schedinit
+  //...
+  procs := ncpu
+  if n, ok := atoi32(gogetenv("GOMAXPROCS")); ok && n > 0 {
+    procs = n
+  }
+  if procresize(procs) != nil {  <- 用 procs 底加
+    throw("unknown runnable goroutine during bootstrap")
+  }
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/proc.go
+// Change number of processors. The world is stopped, sched is locked.
+func procresize(nprocs int32) *p {
+	old := gomaxprocs
+	if old < 0 || nprocs <= 0 {
+		throw("procresize: invalid arg")
+	}
+	//...  
+	// initialize new P's
+	for i := old; i < nprocs; i++ {  <- 從 old 開始
+		pp := allp[i]
+		if pp == nil {
+			pp = new(p)  <- new p
+		}
+		pp.init(i)
+		atomicstorep(unsafe.Pointer(&allp[i]), unsafe.Pointer(pp))
+	}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+func getproccount() int32 {
+	const maxCPUs = 64 * 1024
+	var buf [maxCPUs / 8]byte
+	r := sched_getaffinity(0, unsafe.Sizeof(buf), &buf[0])
+	if r < 0 {
+		return 1
+	}
+	n := int32(0)
+	for _, v := range buf[:r] {
+		for v != 0 {
+			n += int32(v & 1)
+			v >>= 1
+		}
+	}
+	if n == 0 {
+		n = 1
+	}
+	return n
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+func getproccount() int32 {
+	// This buffer is huge (8 kB) but we are on the system stack
+	// and there should be plenty of space (64 kB).
+	// Also this is a leaf, so we're not holding up the memory for long.
+	// See golang.org/issue/11823.
+	// The suggested behavior here is to keep trying with ever-larger
+	// buffers, but we don't have a dynamic memory allocator at the
+	// moment, so that's a bit tricky and seems like overkill.
+	const maxCPUs = 64 * 1024
+	var buf [maxCPUs / 8]byte  <- 8kb
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="armasm">
+// src/runtime/sys_linux_amd64.s
+TEXT runtime·sched_getaffinity(SB),NOSPLIT,$0
+	MOVQ	pid+0(FP), DI
+	MOVQ	len+8(FP), SI
+	MOVQ	buf+16(FP), DX
+	MOVL	$SYS_sched_getaffinity, AX
+	SYSCALL
+	MOVL	AX, ret+24(FP)
+	RET
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="">
+int sched_getaffinity(pid_t pid, size_t cpusetsize,
+                      cpu_set_t *mask);
+		
+This manual page describes the glibc interface for the CPU affinity calls. 
+The actual system call interface is slightly different, with the mask being 
+typed as unsigned long *, reflecting the fact that the underlying implementation 
+of CPU sets is a simple bit mask. On success, the raw sched_getaffinity() system 
+call returns the size (in bytes) of the cpumask_t data type that is used internally
+by the kernel to represent the CPU set bit mask.
+
+	- https://linux.die.net/man/2/sched_getaffinity
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="">
+int sched_getaffinity(pid_t pid, size_t cpusetsize,
+                      cpu_set_t *mask);
+
+This manual page describes the glibc interface for the CPU affinity calls. 
+The actual system call interface is slightly different, with the mask being 
+typed as unsigned long *, reflecting the fact that the underlying implementation 
+of CPU sets is a simple bit mask. On success, the raw sched_getaffinity() system 
+call returns the size (in bytes) of the cpumask_t data type that is used internally
+by the kernel to represent the CPU set bit mask.
+
+	- https://linux.die.net/man/2/sched_getaffinity
+
+	簡單來說就是 glibc interface 和 raw system call 回傳的東西不一樣。
+	glibc 要給一個 cpu mask 指標去拿，但實際上的 system call 會回傳 bit mask size。
+	所以 go 裡面的才能夠拿到回傳的 size 去做 buffer 做 slice。
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Let's try this
+.monaco ./code/deadloop/main.go
+
+# 這邊要 demo
+#1. 加多點 deadloop -> 不能跑
+#1. 加上 f() var a[1<<20]byte a[1] = 1 -> 可以跑
+#1  //go:onsplit 不能跑
 
 ###############################################################################################
 * MoreStack
@@ -706,6 +942,23 @@ low    +-------------+
 ```htmlend
 
 ###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+const (
+	// Goroutine preemption request.
+	// Stored into g->stackguard0 to cause split stack check failure.
+	// Must be greater than any real sp.
+	// 0xfffffade in hex.            <- 剛剛看到的那個
+	stackPreempt = uintptrMask & -1314
+)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
 * MoreStack 11
 ```html
 <pre class="code code18">
@@ -756,29 +1009,6 @@ End of assembler dump.
 ```htmlend
 
 ###############################################################################################
-* 總結一下
-```html
-<ul>
-  <li>就算程式裡面真的形成 deadloop or long waiting task</li>
-	<li>區域變數 >= 4KBi</li>
-	<ul>
-		<li>morestack Yes</li>
-		<li>preempted Yes</li>
-  </ul>
-	<li>128B <= 區域變數 < 4KBi</li>
-	<ul>
-		<li>morestack Maybe</li>
-		<li>preempted Maybe</li>
-  </ul>
-  <li>區域變數 < 128B</li>
-	<ul>
-		<li>morestack No</li>
-		<li>preempted No</li>
-  </ul>
-</ul>
-```htmlend
-
-###############################################################################################
 * _
 ```html
 <pre class="code code18">
@@ -798,70 +1028,7 @@ const (
 ###############################################################################################
 * _
 ```html
-<p class="slogan slogan-15 bold">runtime.morestack_noctxt</p>
-```htmlend
-
-###############################################################################################
-* MoreStack
-```html
-<pre class="code code18">
-<code class="armasm">
-// morestack but not preserving ctxt.
-
-TEXT runtime·morestack_noctxt(SB),NOSPLIT,$0
-	MOVL	$0, DX
-	JMP	runtime·morestack(SB)
-</code>
-</pre>
-```htmlend
-
-###############################################################################################
-* MoreStack
-```html
-<pre class="code code18">
-<code class="armasm">
-NEEDCTXT = 64
-<br>
-(For TEXT items.)
-<br>
-This function is a closure so it uses its incoming context register.
-</code>
-</pre>
-```htmlend
-
-###############################################################################################
-* Closure
-```html
-<pre class="code code18">
-<code class="go">
-func adder() func(int) int {
-	sum := 0
-	return func(x int) int { <- closure
-		sum += x
-		return sum
-	}
-}
-
-</code>
-</pre>
-```htmlend
-
-###############################################################################################
-* MoreStack
-```html
-<pre class="code code18">
-<code class="go">
-// src/cmd/internal/obj/x86/obj6.go
-	// ...
-	morestack := "runtime.morestack"
-	switch {
-	case cursym.CFunc():
-		morestack = "runtime.morestackc"
-	case !cursym.Func.Text.From.Sym.NeedCtxt():  <- 不是 closure，不需要
-		morestack = "runtime.morestack_noctxt"
-	}
-</code>
-</pre>
+<p class="slogan slogan-15 bold">morestack</p>
 ```htmlend
 
 ###############################################################################################
@@ -896,8 +1063,6 @@ TEXT runtime·morestack(SB),NOSPLIT,$0-0
 <pre class="code code18">
 <code class="go">
 // src/runtime/stack.go
-var maxstacksize uintptr = 1 << 20
-// ...
 func newstack() {
 	thisg := getg()
 	// TODO: double check all gp. shouldn't be getg().
@@ -921,7 +1086,6 @@ func newstack() {
 <pre class="code code18">
 <code class="go">
 // src/runtime/stack.go
-// ...
 func newstack() {
 	thisg := getg()
 	// ...
@@ -941,6 +1105,29 @@ func newstack() {
 	}
 </code>
 </pre>
+```htmlend
+
+###############################################################################################
+* 總結一下
+```html
+<ul>
+  <li>就算程式裡面真的形成 deadloop or long waiting task</li>
+	<li>區域變數 >= 4KBi</li>
+	<ul>
+		<li>morestack 有</li>
+		<li>preempted 一定會，且有機會被設置為要被插隊</li>
+  </ul>
+	<li>128B <= 區域變數 < 4KBi</li>
+	<ul>
+		<li>morestack 有</li>
+		<li>preempted 有機會被設置為要被插隊</li>
+  </ul>
+  <li>區域變數 < 128B</li>
+	<ul>
+		<li>morestack 沒有</li>
+		<li>preempted 不會</li>
+  </ul>
+</ul>
 ```htmlend
 
 ###############################################################################################
@@ -968,8 +1155,8 @@ Dump of assembler code for function main.f:
    0x0000000000489358 <+72>:	add    $0x808,%rsp
    0x000000000048935f <+79>:	retq   
    0x0000000000489360 <+80>:	callq  0x44fb30 # runtime.morestack_noctxt <-- 最後面
-	 0x0000000000489365 <+85>:	jmp    0x489310 # main.f
-	 End of assembler dump.
+   0x0000000000489365 <+85>:	jmp    0x489310 # main.f
+   End of assembler dump.
 </code>
 </pre>
 ```htmlend
@@ -1061,6 +1248,23 @@ func stackalloc(n uint32) stack {
 * _
 ```html
 <p class="slogan slogan-15 bold">blog.leexun.tw</p>
+```htmlend
+
+###############################################################################################
+* About me
+```html
+<pre class="code code18">
+<code class="">
+		.---. .--. .---. .--+ .--------. .---. .---   ---.
+		|   |/   / |   |/   / |__    __| |   | \   \ /   /
+		|      <   |      <      |  |    |   |  >       <
+		|   | \  \ |   | \  \    |  |    |   |  /   ^   \
+		.---+ ---+ +---+ ---+    |__|    |___| |___/ \___|
+</code>
+</pre>
+<p class="slogan bold">李洵 Lee Xun</p>
+<p class="slogan bold" style="font-size:22px;">SRE + DevOps</p>
+<p class="slogan bold" style="font-size:22px;"></p>
 ```htmlend
 
 ###############################################################################################
