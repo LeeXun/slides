@@ -4,11 +4,19 @@ SLIDE_HOST=127.0.0.1
 all: help
 
 ## 2019-04-23 Golang meetup #40
-golang40:
+20190423_golang40:
 	mypresent \
 		-http 0.0.0.0:$(PORT) \
 		-orighost $(SLIDE_HOST) \
-		-content src/golang40/ \
+		-content src/20190423_golang40/ \
+		-base themes/default
+
+## 2019-04-23 Golang meetup #40
+kaohsiungkk0720:
+	mypresent \
+		-http 0.0.0.0:$(PORT) \
+		-orighost $(SLIDE_HOST) \
+		-content src/kaohsiungkk0720/ \
 		-base themes/default
 
 #########
