@@ -1,0 +1,369 @@
+Demystify Heap and Stack
+Presented by Lee Xun
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+     +------+
+     |      |
+     |      |
+     |      |
+     |      |   <--- I am random access memory!
+     |      |
+     |      |
+     |      |
+     |      |
+     |      |
+     |      |
+     +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+     +------+
+     |      |
+     |      |
+     |      |
+     |      |   <--- You can use "sbrk, brk, mmap, munmap" in libc
+     |      |        to access me.
+     |      |        And Linux kernal will call "kmalloc, vmalloc" ...
+     |      |
+     |      |
+     |      |
+     |      |
+     +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+       +------+
+       |      |
+       |      |
+0xcccc | 0x11 |   <- 0x00(%rsp) rsp = 0xcccc
+       |      |        Or you can just use me by instruction.
+       |      |        Like 'mov $0x11 0x00(%rsp)'.
+       |      |        
+       |      |
+       |      |
+       |      |
+       |      |
+       +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+       +------+
+       |      |
+       |      |
+       |      |   How many kinds of data?
+       |      |
+       |      |
+       |      |        
+       |      |
+       |      |
+       |      |
+       |      |
+       +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+       +------+
+       |      |
+       |      |
+       |      |   How many kinds of data?
+       |      |   1. Args (env)
+       |      |   2. Program data
+       |      |   3. Program instructions     
+       |      |
+       |      |
+       |      |
+       |      |
+       +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+       +------+
+       |      |
+       |      |
+       |      |   How many kinds of data?
+       |      |   1. Args (env)
+       |      |   2. Program data
+       |      |      - Global (initialized, uninitialized)
+       |      |      - Not global
+       |      |   3. Program instructions     
+       |      |
+       |      |
+       +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="armasm"> 
+
+high   +------+
+       | Args |
+       |      |
+       |      |   How many kinds of data?
+       |      |   1. Args (env)
+       |      |   2. Program data
+       |      |      - Global (initialized, uninitialized)
+       |      |      - Not global
+       | uinit|   3. Program instructions (Text)    
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c"> 
+int r0() 
+{
+  int a = 0;
+  return a;
+}
+high   +------+
+       | Args |
+       |      |
+       | ???  |   Not global:
+       | ???  |    1. useless after a function scope
+       | ???  |    
+       | ???  |   
+       |      |   
+       | uinit|   
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c"> 
+int *newa() 
+{
+  int* a = (int*)malloc(sizeof(int));
+  return a;
+}
+high   +------+
+       | Args |
+       |      |
+       | ???  |   Not global:
+       | ???  |    1. useless after a function scope
+       | ???  |    2. still needed after a function scope
+       | ???  |   
+       |      |   
+       | uinit|   
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c"> 
+void change(int *a)
+{
+  *a = 3;
+}
+
+high   +------+
+       | Args |
+       |      |
+       | ???  |   Not global:
+       | ???  |    1. useless after a function scope
+       | ???  |    2. still needed after a function scope
+       | ???  |   
+       |      |   
+       | uinit|   
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c"> 
+void change(int *a)
+{
+  *a = 3;
+}
+
+high   +------+
+       | Args |
+       |      |
+       | ???  |   Not global:
+       | ???  |    1. useless after a function scope -> stack
+       | ???  |    2. still needed after a function scope -> heap
+       | ???  |   
+       |      |   "Several authors began about 1975 to call the pool"
+       | uinit|   "of available memory a heap."
+       | init |     //- Donald Knuth (The Art of Computer Programming
+       | Text |     //, Third Ed., Vol. 1, p. 435)
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c">
+
+high   +------+
+       | Args |
+       |      |
+       |  ^^  |   Potentially waste the space
+       | stack|
+       |      | 
+       |  ^^  |   
+       | heap | 
+       | uinit|
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c">
+
+high   +------+
+       | Args |
+       | stack|
+       |  ˇˇ  |   Nice
+       |      |
+       |      | 
+       |  ^^  |   
+       | heap | 
+       | uinit|
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c">
+
+high   +------+
+       | Args |
+       | stack|
+       |  ˇˇ  |   Stack can be accessed by rsp, rbp
+       |      |
+       |      | 
+       |  ^^  |   
+       | heap |   rhp? No.
+       | uinit|
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Demystify Heap and Stack
+```html
+<pre class="code code22">
+<code class="c">
+
+high   +------+
+       | Args |
+       | stack|  I am not guaranteed to be lived
+       |  ˇˇ  |  after function returned.
+       |      |
+       |      | 
+       |  ^^  |   
+       | heap |   I have longer lifecycle.
+       | uinit|
+       | init |
+       | Text |
+low    +------+
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">blog.leexun.tw</p>
+```htmlend
