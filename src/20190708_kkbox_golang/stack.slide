@@ -1,6 +1,30 @@
 Demystify Heap and Stack
 Presented by Lee Xun
 
+
+不參與細節
+參與發想、功能實作的架構構思、code review
+
+培養團隊間討論的風氣
+不要害怕提問、講出自己不懂的點
+不要害怕
+
+昨天發生的事情
+今天怎麼解決
+
+terraform 多一點
+packer 多一點
+docker
+k8s
+
+fluentd
+elasticsearch
+varnish
+openvpn
+
+RAILS_ENV=production rvm 2.4.2 do bundle exec rails console
+redis = ActiveSupport::Cache::RedisStore.new "example.com:23682/1"
+
 ###############################################################################################
 * Demystify Heap and Stack
 ```html

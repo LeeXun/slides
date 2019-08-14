@@ -1,23 +1,16 @@
 PORT=3999
 SLIDE_HOST=127.0.0.1
+SLIDE_DIR=.
+THEME_DIR=./../../themes/default
 
-all: help
+all: mypresent
 
-## 2019-04-23 Golang meetup #40
-20190423_golang40:
+mypresent:
 	mypresent \
 		-http 0.0.0.0:$(PORT) \
 		-orighost $(SLIDE_HOST) \
-		-content src/20190423_golang40/ \
-		-base themes/default
-
-## 2019-04-23 Golang meetup #40
-20190720_kaohsiung_kkbox:
-	mypresent \
-		-http 0.0.0.0:$(PORT) \
-		-orighost $(SLIDE_HOST) \
-		-content src/20190720_kaohsiung_kkbox/ \
-		-base themes/bright
+		-content $(SLIDE_DIR)/ \
+		-base $(THEME_DIR)/
 
 #########
 # Help ##
