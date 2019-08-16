@@ -1,0 +1,286 @@
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">從組合語言開始</p>
+```htmlend
+#如果太複雜算不出來，那就用 go tool objdump, go vet
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">怎麼開始？</b></p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">偷看 goroutine 的 id</b></p>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/runtime2.go
+type g struct {
+	stack       stack   // offset known to runtime/cgo
+	stackguard0 uintptr // offset known to liblink
+	stackguard1 uintptr // offset known to liblink
+
+	_panic         *_panic // innermost panic - offset known to liblink
+	_defer         *_defer // innermost defer
+	m              *m      // current m; offset known to arm liblink
+	sched          gobuf
+	syscallsp      uintptr        
+	syscallpc      uintptr        
+	stktopsp       uintptr // expected sp at top of stack, to check in traceback
+	param          unsafe.Pointer // passed parameter on wakeup
+	atomicstatus   uint32
+	stackLock      uint32 // sigprof/scang lock; TODO: fold in to atomicstatus
+底加 ->	goid           int64  
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stubs.go
+package runtime
+
+import "unsafe"
+
+// Should be a built-in for unsafe.Pointer?
+//go:nosplit
+func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
+	return unsafe.Pointer(uintptr(p) + x)
+}
+
+// getg returns the pointer to the current g.
+// The compiler rewrites calls to this function into instructions
+// that fetch the g directly (from TLS or from the dedicated register).
+func getg() *g <- 底加
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">？？ func getg() *g ？？</p>
+<p class="slogan bold">所以我說那個 body 呢</b></p>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// src/cmd/compile/internal/amd64/ssa.go
+	case ssa.OpAMD64LoweredGetG:   <- GetG!!!!
+		r := v.Reg()
+		// See the comments in cmd/internal/obj/x86/obj6.go
+		// near CanUse1InsnTLS for a detailed explanation of these instructions.
+		if x86.CanUse1InsnTLS(gc.Ctxt) { <- 可以只用一個指令就拿到 TLS
+			// MOVQ (TLS), r  
+			p := s.Prog(x86.AMOVQ)
+			p.From.Type = obj.TYPE_MEM
+			p.From.Reg = x86.REG_TLS
+			p.To.Type = obj.TYPE_REG
+			p.To.Reg = r
+		} else {                         <- 不行
+			// MOVQ TLS, r
+			// MOVQ (r)(TLS*1), r
+			p := s.Prog(x86.AMOVQ)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* TLS, Thread local storage
+```html
+<ul>
+  <li>用意：利用 static or global memory 去儲存狀態</li>
+  <li>Go 的 G,M,P 模型中 M 就相當於 thread</li>
+  <li>Linux, libc pthread</li>
+  <ul>
+    <li>pthread_key_create, pthread_key_delete</li>
+  </ul>
+  <li>Windows</li>
+  <ul>
+    <li>TlsGetValue, TlsSetValue</li>
+  </ul>
+</ul>
+```htmlend
+.caption [[https://en.wikipedia.org/wiki/Win32_Thread_Information_Block][Win32 TIB TEB]]
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Plan 9</p>
+```htmlend
+
+###############################################################################################
+* Plan9 的指令操作方向
+```html
+<pre class="code code22">
+<code class="armasm">
+
+         plan9                            intel 
+           |                                | 
+      MOVQ $0x10, AX                   mov rax, 0x10
+           |------>                         <-----|
+
+
+       ; 和 AT&T 類似                     ; 和 intel 相反
+
+</code>
+</pre>
+```htmlend
+.caption 凡事都以例外，好奇的話請看 [[https://quasilyte.dev/blog/files/x86_2.csv][完整列表]]
+```html
+<ul>
+  <li>gdb 可以用 set disassembly-flavor intel 把他從 AT&T 改顯示 intel</li>
+  <li>為了不讓大家轉換得太辛苦，後面的 gdb 例子都是用 AT&T</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code>
+// main_amd64.s
+ #include "funcdata.h"
+ #include "textflag.h"
+
+ #define get_tls(r)	MOVQ TLS, r
+ #define g(r)		0(r)(TLS*1)	<- TLS, Thread local storage
+ #define g_goid(r)	152(r)		<- 152 是哪裡來的？
+
+ TEXT ·getgoid(SB),NOSPLIT,$0
+	 get_tls(CX)
+	 MOVQ	g(CX), AX        <- 先到 g
+	 MOVQ	g_goid(AX), AX   <- 再從 g 到 goid
+	 MOVQ	AX, ret+0(FP)    
+	 RET
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="go">
+// main.go
+func getgoid() int64 // 不用 body
+
+func routine() {
+	// 這邊故意讓他 panic，看我們抓到的對不對
+	panic(fmt.Sprintf("getgoid: %d\n", getgoid()))
+	time.Sleep(time.Second * 1)
+}
+
+func main() {
+	go routine()
+	for {
+		time.Sleep(time.Second * 1)
+		fmt.Printf("0: %x\n", getgoid())
+	}
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Plan9 getgoid
+```html
+<pre class="code code18">
+<code class="">
+panic: getgoid: 18           <- 讚喔！
+
+goroutine 18 [running]:      <-
+//main.routine()
+//	/root/lab/40gomeetup/code/getg/main.go:13 +0x111
+//created by main.main
+//	/root/lab/40gomeetup/code/getg/main.go:18 +0x47
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 至於那個 152 是怎麼來的？
+```html
+<pre class="code code20">
+<code class="go">
+// src/runtime/runtime2/go
+type stack struct { // *2
+	lo uintptr
+	hi uintptr
+}
+
+type gobuf struct { // *7
+	sp   uintptr
+	pc   uintptr
+	g    guintptr // type guintptr uintptr
+	ctxt unsafe.Pointer
+	ret  sys.Uintreg // type Uintreg uint64 看平台
+	lr   uintptr
+	bp   uintptr // for GOEXPERIMENT=framepointer
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 至於那個 152 是怎麼來的？
+```html
+<pre class="code code20">
+<code class="go">
+// src/runtime/runtime2/go
+type g struct { // 2+7+1+9 = 19*8 = 152
+	stack       stack   // 2
+	stackguard0 uintptr // 1
+	stackguard1 uintptr // 1
+
+	_panic         *_panic 	 // 1
+	_defer         *_defer 	 // 1
+	m              *m 	 // 1
+	sched          gobuf	 // 7
+	syscallsp      uintptr	 // 1        
+	syscallpc      uintptr	 // 1
+	stktopsp       uintptr	 // 1        
+	param          unsafe.Pointer // 1
+	atomicstatus   uint32 // 0.5
+	stackLock      uint32 // 0.5
+	goid           int64  <- 底加
+  //...
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10">其實編譯原始碼時</p>
+<p class="slogan">有個檔案叫做 go_asm.h</p>
+```htmlend
+
+###############################################################################################
+* _
+.image imgs/goasm.png
+
+###############################################################################################
+* 官方文件的雷
+.image imgs/asm_doc.png 350 _
+.caption 是在 go_tls.h，不是 go_asm.h，而且 go_asm.h 在編譯完就被刪除了
+
+###############################################################################################
+* PR 後官方的回應
+.image imgs/pr_response.png 480 _

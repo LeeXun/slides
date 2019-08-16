@@ -1,0 +1,338 @@
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">當時被 Go 吸引的原因</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Assembly</p>
+```htmlend
+
+###############################################################################################
+* C 的 helloworld!
+```html
+<pre class="code code22">
+<code class="">
+  int main()
+  {
+    printf("Hello, 世界\n");
+    return 0;
+  }
+</code>
+</pre>
+<pre class="code code22">
+<code class="">
+  0x00000000004004e7 <+0>:	push   %rbp
+  0x00000000004004e8 <+1>:	mov    %rsp,%rbp
+  0x00000000004004eb <+4>:	lea    0x92(%rip),%rdi # 0x400584
+  0x00000000004004f2 <+11>:	callq  0x4003f0 <puts@plt>
+  0x00000000004004f7 <+16>:	mov    $0x0,%eax
+  0x00000000004004fc <+21>:	pop    %rbp
+  0x00000000004004fd <+22>:	retq  
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">有趣的是</p>
+```htmlend
+
+###############################################################################################
+* Go 的 helloworld!
+```html
+<pre class="code code22">
+<code class="">
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, 世界")
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* . . .
+```html
+<pre class="code code18">
+<code class="">
+0x00000000004871b0 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+0x00000000004871b9 <+9>:	cmp    0x10(%rcx),%rsp
+0x00000000004871bd <+13>:	jbe    0x487230 # main.main+128
+0x00000000004871bf <+15>:	sub    $0x58,%rsp
+0x00000000004871c3 <+19>:	mov    %rbp,0x50(%rsp)
+0x00000000004871c8 <+24>:	lea    0x50(%rsp),%rbp
+0x00000000004871cd <+29>:	xorps  %xmm0,%xmm0
+0x00000000004871d0 <+32>:	movups %xmm0,0x40(%rsp)
+0x00000000004871d5 <+37>:	lea    0x11204(%rip),%rax        # 0x4983e0
+0x00000000004871dc <+44>:	mov    %rax,0x40(%rsp)
+0x00000000004871e1 <+49>:	lea    0x485d8(%rip),%rax        # 0x4cf7c0 main.statictmp_0
+0x00000000004871e8 <+56>:	mov    %rax,0x48(%rsp)
+0x00000000004871ed <+61>:	nop
+0x00000000004871ee <+62>:	mov    0xd05fb(%rip),%rax        # 0x5577f0 os.Stdout
+0x00000000004871f5 <+69>:	lea    0x49ac4(%rip),%rcx        # 0x4d0cc0 go.itab.*os.File,io.Writer
+0x00000000004871fc <+76>:	mov    %rcx,(%rsp)
+0x0000000000487200 <+80>:	mov    %rax,0x8(%rsp)
+0x0000000000487205 <+85>:	lea    0x40(%rsp),%rax
+0x000000000048720a <+90>:	mov    %rax,0x10(%rsp)
+0x000000000048720f <+95>:	movq   $0x1,0x18(%rsp)
+0x0000000000487218 <+104>:	movq   $0x1,0x20(%rsp)
+0x0000000000487221 <+113>:	callq  0x480b60  # fmt.Fprintln
+0x0000000000487226 <+118>:	mov    0x50(%rsp),%rbp
+0x000000000048722b <+123>:	add    $0x58,%rsp
+0x000000000048722f <+127>:	retq   
+0x0000000000487230 <+128>:	callq  0x44f340 # runtime.morestack_noctxt
+0x0000000000487235 <+133>:	jmpq   0x4871b0 # main.main
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Stack or Heap</p>
+```htmlend
+
+###############################################################################################
+* 這好像哪裡有點神奇
+```html
+<pre class="code code18">
+<code class="go">
+func newA() *int {
+	var a int = 0
+	return &a
+}
+
+func newB() *int {
+	var b int = 1
+	return &b
+}
+
+func main() {
+	a := newA()
+	b := newB()
+	fmt.Printf("%v\n", *a)
+	fmt.Printf("%v\n", *b)
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In C
+```html
+<pre class="code code18">
+<code class="c">
+int *newA() {
+  int a = 0;
+  return &a;
+}
+
+int *newB() {
+  int b = 1;
+  return &b;
+}
+
+int main() {
+  int *a = newA();
+  int *b = newB();
+  printf("a: %d\n", *a);
+  printf("b: %d\n", *b);
+  return 0;
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In C
+```html
+<pre class="code code18">
+<code class="c">
+int *newA() {
+  int a = 0;
+  return &a;
+}
+
+int *newB() {
+  int b = 1;
+  return &b;
+}
+
+int main() {
+  int *a = newA();
+  int *b = newB();
+  printf("a: %d\n", *a); // a: 1
+  printf("b: %d\n", *b); // b: 1490617567
+  return 0;
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In Go
+```html
+<pre class="code code18">
+<code class="go">
+func newA() *int {
+	var a int = 0
+	return &a
+}
+
+func newB() *int {
+	var b int = 1
+	return &b
+}
+
+func main() {
+	a := newA()
+	b := newB()
+	fmt.Printf("%v\n", *a)   // a: 0
+	fmt.Printf("%v\n", *b)   // a: 1
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">What happened?</p>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="armasm">
+  high   +-------+
+         |  ...  |
+         +-------+
+         |  ...  |
+         +-------+           int *newA() {
+         |  ...  |               int a = 0; // loc1
+         +-------+               return &a;
+         |ret(&a)|           }
+         +-------+
+         | readdr|
+         +-------+
+         |   BP  |
+         +-------+
+         | a = 0 | 
+         +-------+ <- &a = 0x7ffeec3156dc
+         |  ...  | 
+  low    +-------+ 
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="armasm">
+  high   +-------+ 
+         |  xxxx |
+         +-------+
+         |  xxxx |
+         +-------+
+         |  xxxx |
+         +-------+
+         |ret(&a)|
+         +-------+  function 已經結束
+         | readdr|
+         +-------+
+         |   BP  |
+         +-------+
+         | a = 0 | 
+         +-------+ <- &a 這還能用嗎？
+         |  xxxx | 
+  low    +-------+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="armasm">
+  high   +-------+
+         |  ...  |
+         +-------+
+         |  ...  |
+         +-------+           int *newB() {
+         |  ...  |               int b = 1; // loc1
+         +-------+               return &b;
+         |ret(&b)|           }
+         +-------+
+         | readdr|
+         +-------+
+         |   BP  |
+         +-------+
+         | b = 1 | 
+         +-------+ <- &b = 0x7ffeec3156dc 這個位址又被用走了
+         |  ...  |         之後又會被 printf 之後的用髒: 1490617567
+  low    +-------+ 
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* In Go
+```html
+<pre class="code code18">
+<code class="go">
+func newA() *int {
+	var a int = 0
+	return &a
+}
+
+func newB() *int {
+	var b int = 1
+	return &b
+}
+
+func main() {
+	a := newA()
+	b := newB()
+	fmt.Printf("%v\n", *a)   // a: 0
+	fmt.Printf("%v\n", *b)   // a: 1
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Escape
+```html
+<pre class="code code18">
+<code class="">
+   go tool compile -m main.go
+// main.go:5:6: can inline X
+// main.go:10:6: can inline ChangeX
+// main.go:15:8: inlining call to X
+// main.go:16:9: inlining call to ChangeX
+// main.go:17:12: inlining call to fmt.Printf
+   main.go:7:9: &x escapes to heap            <- escape to heap!!!!
+   main.go:6:6: moved to heap: x
+// main.go:10:14: ChangeX xp does not escape
+// main.go:17:21: *x escapes to heap
+// main.go:17:12: io.Writer(os.Stdout) escapes to heap
+// main.go:15:8: main &x does not escape
+// main.go:17:12: main []interface {} literal does not escape
+// <autogenerated>:1: os.(*File).close .this does not escape
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Twitch heap
+.image imgs/twitch_heap.png 480 _
