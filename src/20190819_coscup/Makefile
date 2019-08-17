@@ -12,6 +12,13 @@ mypresent:
 		-content $(SLIDE_DIR)/ \
 		-base $(THEME_DIR)/
 
+mypresent2:
+	mypresent \
+		-http 0.0.0.0:$(PORT) \
+		-orighost $(SLIDE_HOST) \
+		-content $(SLIDE_DIR)/ \
+		-base ./../../themes/bright/
+
 #########
 # Help ##
 #########

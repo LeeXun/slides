@@ -596,7 +596,7 @@ int main()
 ```html
 <ul>
   <li>妥善利用硬體多核心</li>
-	<li>減少 context switch</li>
+	<li>減少依賴 OS context switch</li>
   <li>減少和 kernal 溝通成本</li>
   <li>創建 thread 的開銷大</li>
   <li>降低 golang 垃圾回收機制的實作複雜度</li>
@@ -825,6 +825,71 @@ by the kernel to represent the CPU set bit mask.
 	簡單來說就是 glibc interface 和 raw system call 回傳的東西不一樣。
 	glibc 要給一個 cpu mask 指標去拿，但實際上的 system call 會回傳 bit mask size。
 	所以 go 裡面的才能夠拿到回傳的 size 去做 buffer 做 slice。
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">簡單來說結果就是長這樣</p>
+<p class="slogan bold">[3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">3>>1 = 1</p>
+<p class="slogan bold">1>>1 = 0</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">結果就是兩個 P</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">還沒結束！</p>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/os_darwin.go
+// BSD interface for threading.
+func osinit() {
+	// pthread_create delayed until end of goenvs so that we
+	// can look at the environment first.
+
+	ncpu = getncpu()
+	physPageSize = getPageSize()
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* GOMAXPROCS 溯源
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/os_darwin.go
+func getncpu() int32 {
+	// Use sysctl to fetch hw.ncpu.   <- 貼心註解  sysctl hw.ncpu
+	mib := [2]uint32{_CTL_HW, _HW_NCPU}
+	out := uint32(0)
+	nout := unsafe.Sizeof(out)
+	ret := sysctl(&mib[0], 2, (*byte)(unsafe.Pointer(&out)), &nout, nil, 0)
+	if ret >= 0 && int32(out) > 0 {
+		return int32(out)
+	}
+	return 1
+}
 </code>
 </pre>
 ```htmlend

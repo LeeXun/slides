@@ -50,8 +50,8 @@ function initPlayground(transport) {
 		var editor = monaco.editor.create(code, {
 			value: raw,
 			language: 'go',
-			// theme: 'vs',
-			theme: 'vs-dark',
+			theme: 'vs',
+			// theme: 'vs-dark',
 			// theme: 'hc-black',
 			fontSize: 18
 		});

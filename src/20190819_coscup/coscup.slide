@@ -114,7 +114,7 @@ Presented by Lee Xun
 ```htmlend
 
 ###############################################################################################
-* GOMAXPROCS 溯源
+* Linux 的 ncpu
 ```html
 <pre class="code code18">
 <code class="go">
@@ -136,7 +136,7 @@ Presented by Lee Xun
 ```htmlend
 
 ###############################################################################################
-* GOMAXPROCS 溯源
+* Linux 用 sched_getaffinity
 ```html
 <pre class="code code18">
 <code class="go">
@@ -165,7 +165,7 @@ func getproccount() int32 {
 ```htmlend
 
 ###############################################################################################
-* GOMAXPROCS 溯源
+* Mac 的 ncpu
 ```html
 <pre class="code code18">
 <code class="go">
@@ -183,7 +183,7 @@ func osinit() {
 ```htmlend
 
 ###############################################################################################
-* GOMAXPROCS 溯源
+* Mac 用 sysctl hw.ncpu
 ```html
 <pre class="code code18">
 <code class="go">
@@ -213,6 +213,19 @@ func getncpu() int32 {
 #1  //go:onsplit 不能跑
 
 ###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">Goroutine 初始 stack 多大？</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">Goroutine 初始 stack 多大？</p>
+<p class="slogan bold">2 KiB (2*2^10)B</p>
+```htmlend
+
+###############################################################################################
 * MoreStack
 ```html
 <pre class="code code18">
@@ -237,6 +250,7 @@ func deadloop() {
 <pre class="code code18">
 <code class="armasm">
 // var a [1 << 12]byte // 4096 B
+// %fs:0xfffffffffffffff8 => TLS
 	 Dump of assembler code for function main.f:
    0x0000000000489310 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
    0x0000000000489319 <+9>:	mov    0x10(%rcx),%rsi   <- 0x10(%rcx) 是什麼？
@@ -341,7 +355,7 @@ End of assembler dump.
 ```htmlend
 
 ###############################################################################################
-* MoreStack
+* morestack_noctxt
 ```html
 <pre class="code code18">
 <code class="armasm">
@@ -355,7 +369,7 @@ TEXT runtime·morestack_noctxt(SB),NOSPLIT,$0
 ```htmlend
 
 ###############################################################################################
-* MoreStack
+* morestack_noctxt
 ```html
 <pre class="code code18">
 <code class="go">
@@ -400,7 +414,7 @@ func main() {
 ```htmlend
 
 ###############################################################################################
-* MoreStack
+* moreStack -> newstack
 ```html
 <pre class="code code18">
 <code class="armasm">
@@ -426,7 +440,7 @@ TEXT runtime·morestack(SB),NOSPLIT,$0-0
 ```htmlend
 
 ###############################################################################################
-* NewStack
+* newsize := oldsize * 2
 ```html
 <pre class="code code18">
 <code class="go">
@@ -451,7 +465,7 @@ func newstack() {
 ```htmlend
 
 ###############################################################################################
-* NewStack
+* preempt := atomic.Loaduintptr(&gp.stackguard0) == stackPreempt
 ```html
 <pre class="code code18">
 <code class="go">
@@ -479,6 +493,30 @@ func newstack() {
 ```htmlend
 
 ###############################################################################################
+* NewStack
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/stack.go
+const (
+	uintptrMask = 1<<(8*sys.PtrSize) - 1
+
+	// Goroutine preemption request.
+	// Stored into g->stackguard0 to cause split stack check failure.
+	// Must be greater than any real sp.
+	// 0xfffffade in hex.            <- 剛剛看到的那個
+	stackPreempt = uintptrMask & -1314
+
+	// Thread is forking.
+	// Stored into g->stackguard0 to cause split stack check failure.
+	// Must be greater than any real sp.
+	stackFork = uintptrMask & -1234
+)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
 * _
 ```html
 <p class="slogan slogan-15 bold">是誰把 stackguard0 偷改成 stackPreempt 的</p>
@@ -491,7 +529,7 @@ func newstack() {
 ```htmlend
 
 ###############################################################################################
-* sysmon
+* sysmon 每多久出來一次？
 ```html
 <pre class="code code18">
 <code class="go">
@@ -572,7 +610,7 @@ func preemptone(_p_ *p) bool {
 	// comparing the current stack pointer to gp->stackguard0.
 	// Setting gp->stackguard0 to StackPreempt folds
 	// preemption into the normal stack overflow check.
-	gp.stackguard0 = stackPreempt
+	gp.stackguard0 = stackPreempt // <- 底加
 	return true
 }
 </code>
@@ -580,24 +618,36 @@ func preemptone(_p_ *p) bool {
 ```htmlend
 
 ###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">morestack 是個後門</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">只要 func 被塞入 morestack</p>
+<p class="slogan bold">就有機會被 sysmon 中斷。</p>
+```htmlend
+
+###############################################################################################
 * 總結
 ```html
 <ul>
-  <li>被 sysmon 透過 morestack 暗藏的中斷的機會</li>
-	<li>區域變數 >= 4KBi</li>
+  <li>區域變數 >= 4KBi</li>
 	<ul>
 		<li>強制進入 morestack</li>
-		<li>被插隊 Yes</li>
+		<li>有可能被插隊</li>
   </ul>
 	<li>128B <= 區域變數 < 4KBi</li>
 	<ul>
 		<li>可能進入 morestack</li>
-		<li>被插隊 Yes</li>
+		<li>有可能被插隊 Yes</li>
   </ul>
   <li>區域變數 < 128B</li>
 	<ul>
 		<li>不會進入 morestack</li>
-		<li>被插隊 No</li>
+		<li>不會被插隊</li>
   </ul>
 </ul>
 ```htmlend
@@ -677,6 +727,7 @@ Dump of assembler code for function main.f:
 		<li>stackpoolalloc</li>
 		<li>stackpoolfree</li>
 		<li>...</li>
+		<li>以上都只是冰山一角</li>
   </ul>
 </ul>
 ```htmlend
