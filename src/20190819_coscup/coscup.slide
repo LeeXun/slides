@@ -19,9 +19,86 @@ Presented by Lee Xun
 ```htmlend
 
 ###############################################################################################
+* C 的 helloworld!
+```html
+<pre class="code code22">
+<code class="">
+  int main()
+  {
+    printf("Hello, 世界\n");
+    return 0;
+  }
+</code>
+</pre>
+<pre class="code code22">
+<code class="">
+  0x00000000004004e7 <+0>:	push   %rbp
+  0x00000000004004e8 <+1>:	mov    %rsp,%rbp
+  0x00000000004004eb <+4>:	lea    0x92(%rip),%rdi # 0x400584
+  0x00000000004004f2 <+11>:	callq  0x4003f0 <puts@plt>
+  0x00000000004004f7 <+16>:	mov    $0x0,%eax
+  0x00000000004004fc <+21>:	pop    %rbp
+  0x00000000004004fd <+22>:	retq  
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
 * _
 ```html
-<p class="slogan slogan-15 bold">當時被 Go 吸引的原因</p>
+<p class="slogan slogan-15 bold">有趣的是</p>
+```htmlend
+
+###############################################################################################
+* Go 的 helloworld!
+```html
+<pre class="code code22">
+<code class="">
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, 世界")
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* . . .
+```html
+<pre class="code code18">
+<code class="">
+0x00000000004871b0 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+0x00000000004871b9 <+9>:	cmp    0x10(%rcx),%rsp
+0x00000000004871bd <+13>:	jbe    0x487230 # main.main+128
+0x00000000004871bf <+15>:	sub    $0x58,%rsp
+0x00000000004871c3 <+19>:	mov    %rbp,0x50(%rsp)
+0x00000000004871c8 <+24>:	lea    0x50(%rsp),%rbp
+0x00000000004871cd <+29>:	xorps  %xmm0,%xmm0
+0x00000000004871d0 <+32>:	movups %xmm0,0x40(%rsp)
+0x00000000004871d5 <+37>:	lea    0x11204(%rip),%rax        # 0x4983e0
+0x00000000004871dc <+44>:	mov    %rax,0x40(%rsp)
+0x00000000004871e1 <+49>:	lea    0x485d8(%rip),%rax        # 0x4cf7c0 main.statictmp_0
+0x00000000004871e8 <+56>:	mov    %rax,0x48(%rsp)
+0x00000000004871ed <+61>:	nop
+0x00000000004871ee <+62>:	mov    0xd05fb(%rip),%rax        # 0x5577f0 os.Stdout
+0x00000000004871f5 <+69>:	lea    0x49ac4(%rip),%rcx        # 0x4d0cc0 go.itab.*os.File,io.Writer
+0x00000000004871fc <+76>:	mov    %rcx,(%rsp)
+0x0000000000487200 <+80>:	mov    %rax,0x8(%rsp)
+0x0000000000487205 <+85>:	lea    0x40(%rsp),%rax
+0x000000000048720a <+90>:	mov    %rax,0x10(%rsp)
+0x000000000048720f <+95>:	movq   $0x1,0x18(%rsp)
+0x0000000000487218 <+104>:	movq   $0x1,0x20(%rsp)
+0x0000000000487221 <+113>:	callq  0x480b60  # fmt.Fprintln
+0x0000000000487226 <+118>:	mov    0x50(%rsp),%rbp
+0x000000000048722b <+123>:	add    $0x58,%rsp
+0x000000000048722f <+127>:	retq   
+0x0000000000487230 <+128>:	callq  0x44f340 # runtime.morestack_noctxt
+0x0000000000487235 <+133>:	jmpq   0x4871b0 # main.main
+</code>
+</pre>
 ```htmlend
 
 ###############################################################################################
@@ -45,7 +122,7 @@ Presented by Lee Xun
 ```htmlend
 
 ###############################################################################################
-* Thread
+* Task(Thread, Process)
 ```html
 <pre class="code code18">
 <code class="armasm">
@@ -84,6 +161,13 @@ Presented by Lee Xun
 	Context switch 是來自程式裡面自己有「禮讓」的功能。
 </code>
 </pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">Task 是作業系統排程的</p>
+<p class="slogan bold">Goroutine 是 Go 自己排程的</p>
 ```htmlend
 
 ###############################################################################################
@@ -213,25 +297,12 @@ func getncpu() int32 {
 #1  //go:onsplit 不能跑
 
 ###############################################################################################
-* _
-```html
-<p class="slogan slogan-10 bold">Goroutine 初始 stack 多大？</p>
-```htmlend
-
-###############################################################################################
-* _
-```html
-<p class="slogan slogan-10 bold">Goroutine 初始 stack 多大？</p>
-<p class="slogan bold">2 KiB (2*2^10)B</p>
-```htmlend
-
-###############################################################################################
 * MoreStack
 ```html
 <pre class="code code18">
 <code class="go">
 func f() {
-	var a [1 << ???]byte   <- ???
+	var a [1 << ???]byte   <- 在 stack 裡面的變數，stack 有多大？
 	a[0] = 0
 }
 
@@ -414,7 +485,7 @@ func main() {
 ```htmlend
 
 ###############################################################################################
-* moreStack -> newstack
+* morestack 之後呢？
 ```html
 <pre class="code code18">
 <code class="armasm">
@@ -444,8 +515,8 @@ TEXT runtime·morestack(SB),NOSPLIT,$0-0
 ```html
 <pre class="code code18">
 <code class="go">
-// src/runtime/stack.go
-var maxstacksize uintptr = 1 << 20
+// https://sourcegraph.com/github.com/golang/go@9c1f14f/-/blob/src/runtime/stack.go#L916:1
+// https://sourcegraph.com/search?q=repo:%5Egithub%5C.com/golang/go%24%409c1f14f+maxstacksize#1
 // ...
 func newstack() {
 	thisg := getg()
@@ -465,7 +536,7 @@ func newstack() {
 ```htmlend
 
 ###############################################################################################
-* preempt := atomic.Loaduintptr(&gp.stackguard0) == stackPreempt
+* stackPreempt
 ```html
 <pre class="code code18">
 <code class="go">
@@ -478,7 +549,7 @@ func newstack() {
 	// ...
 	preempt := atomic.Loaduintptr(&gp.stackguard0) == stackPreempt // <- 如果相等
 	// ...
-		if preempt {
+	if preempt {
 		if thisg.m.locks != 0 || thisg.m.mallocing != 0
 		 || thisg.m.preemptoff != "" 
 		 || thisg.m.p.ptr().status != _Prunning {
@@ -529,60 +600,26 @@ const (
 ```htmlend
 
 ###############################################################################################
-* sysmon 每多久出來一次？
+* Sysmon 功用
 ```html
-<pre class="code code18">
-<code class="go">
-func sysmon() {
-	// ...
-	for {
-		if idle == 0 { // start with 20us sleep...
-			delay = 20
-		} else if idle > 50 { // start doubling the sleep after 1ms...
-			delay *= 2
-		}
-		if delay > 10*1000 { // up to 10ms
-			delay = 10 * 1000
-		}
-	}
-	// ...
-	// https://sourcegraph.com/github.com/golang/go@9c1f14f/-/blob/src/runtime/proc.go#L4385
-		if retake(now) != 0 {
-			idle = 0
-		} else {
-			idle++
-		}
-
-}
-</code>
-</pre>
+<ul>
+  <li>釋放閒置太久的空白記憶體</li>
+	<li>如果太久沒有跑 gc 就跑一下</li>
+	<li>長時間未處理的 netpoll 就拉回來</li>
+	<li>收回因 syscall 長時間阻塞的 P</li>
+	<li>向長時間未禮讓的 goroutine 發出中斷</li>
+</ul>
 ```htmlend
 
 ###############################################################################################
-* stackPreempt
+* sysmon
 ```html
 <pre class="code code18">
 <code class="go">
-// forcePreemptNS is the time slice given to a G before it is
-// preempted.
-const forcePreemptNS = 10 * 1000 * 1000 // 10ms
+// https://sourcegraph.com/github.com/golang/go@9c1f14f/-/blob/src/runtime/proc.go#L132
+// https://sourcegraph.com/github.com/golang/go@9c1f14f/-/blob/src/runtime/proc.go#L4278:6
 
-func retake(now int64) uint32 {
-	n := 0
-	lock(&allpLock)
-	for i := 0; i < len(allp); i++ {
-		// ...
-		if s == _Prunning || s == _Psyscall {
-			// Preempt G if it's running for too long.
-			t := int64(_p_.schedtick)
-			if int64(pd.schedtick) != t {
-				pd.schedtick = uint32(t)
-				pd.schedwhen = now
-			} else if pd.schedwhen+forcePreemptNS <= now {
-				preemptone(_p_)
-				sysretake = true
-			}
-		}
+sysmon -> retake -> preemptone
 </code>
 </pre>
 ```htmlend
@@ -620,13 +657,20 @@ func preemptone(_p_ *p) bool {
 ###############################################################################################
 * _
 ```html
-<p class="slogan slogan-15 bold">morestack 是個後門</p>
+<p class="slogan slogan-10 bold">morestack 是個後門</p>
 ```htmlend
 
 ###############################################################################################
 * _
 ```html
-<p class="slogan slogan-10 bold">只要 func 被塞入 morestack</p>
+<p class="slogan slogan-10 bold">morestack 是個後門</p>
+<p class="slogan bold">stackguard0 可能是個假象</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">只要 func 被塞入 morestack 和 cmp</p>
 <p class="slogan bold">就有機會被 sysmon 中斷。</p>
 ```htmlend
 
@@ -635,18 +679,14 @@ func preemptone(_p_ *p) bool {
 ```html
 <ul>
   <li>區域變數 >= 4KBi</li>
-	<ul>
-		<li>強制進入 morestack</li>
-		<li>有可能被插隊</li>
-  </ul>
 	<li>128B <= 區域變數 < 4KBi</li>
 	<ul>
-		<li>可能進入 morestack</li>
-		<li>有可能被插隊 Yes</li>
+		<li>有 morestack</li>
+		<li>有可能被插隊</li>
   </ul>
   <li>區域變數 < 128B</li>
 	<ul>
-		<li>不會進入 morestack</li>
+		<li>不會有 morestack</li>
 		<li>不會被插隊</li>
   </ul>
 </ul>
