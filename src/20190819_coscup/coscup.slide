@@ -44,12 +44,6 @@ Presented by Lee Xun
 ```htmlend
 
 ###############################################################################################
-* _
-```html
-<p class="slogan slogan-15 bold">有趣的是</p>
-```htmlend
-
-###############################################################################################
 * Go 的 helloworld!
 ```html
 <pre class="code code22">
@@ -104,7 +98,7 @@ func main() {
 ###############################################################################################
 * _
 ```html
-<p class="slogan slogan-15 bold">Goroutine</p>
+<p class="slogan slogan-15 bold">到底發生什麼事了？XD</p>
 ```htmlend
 
 ###############################################################################################
@@ -119,6 +113,52 @@ func main() {
 * _
 ```html
 <p class="slogan slogan-15 bold">Goroutine 和 Thread 到底差在哪？</p>
+```htmlend
+
+###############################################################################################
+* task_struct in linux
+```html
+<pre class="code code18">
+<code class="c">
+// Process and Thread are task_struct in Linux
+struct task_struct {
+	void				*stack; // kernal stack
+	struct thread_info		thread_info; // context switch 要用的資訊
+	volatile long			state; /* -1 unrunnable, 0 runnable, >0 stopped: */
+	struct mm_struct		*mm; // 指向 virtual memory 區塊
+	struct mm_struct		*active_mm; // 有緣再說
+	/* ... */
+}
+
+// https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/sched.h#L634
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Goroutine in golang
+```html
+<pre class="code code18">
+<code class="go">
+// src/runtime/runtime2.go
+type g struct {
+	stack       stack   // offset known to runtime/cgo
+	stackguard0 uintptr // offset known to liblink
+	stackguard1 uintptr // offset known to liblink
+
+	_panic         *_panic // innermost panic - offset known to liblink
+	_defer         *_defer // innermost defer
+	m              *m      // current m; offset known to arm liblink
+	sched          gobuf
+	syscallsp      uintptr        
+	syscallpc      uintptr        
+	stktopsp       uintptr // expected sp at top of stack, to check in traceback
+	param          unsafe.Pointer // passed parameter on wakeup
+	atomicstatus   uint32
+	stackLock      uint32 // sigprof/scang lock; TODO: fold in to atomicstatus
+底加 ->	goid           int64  
+</code>
+</pre>
 ```htmlend
 
 ###############################################################################################
@@ -149,10 +189,10 @@ func main() {
 <pre class="code code18">
 <code class="armasm">
 
-			Task
+		     Task(Thread)
 	+-----------------------------------+
 	|                                   |
-	|  G1  ->   G2   ->   G3   -> G4    |
+	|  G1  ->   G2   ->   G3   ->   G4  |
 	|                                   |
 	|  ->  G5  ->  G6  ->  G7  ...      |
 	|                                   |
@@ -297,25 +337,6 @@ func getncpu() int32 {
 #1  //go:onsplit 不能跑
 
 ###############################################################################################
-* MoreStack
-```html
-<pre class="code code18">
-<code class="go">
-func f() {
-	var a [1 << ???]byte   <- 在 stack 裡面的變數，stack 有多大？
-	a[0] = 0
-}
-
-func deadloop() {
-	for {
-		f()
-	}
-}
-</code>
-</pre>
-```htmlend
-
-###############################################################################################
 * MoreStack 12
 ```html
 <pre class="code code18">
@@ -341,7 +362,7 @@ func deadloop() {
 ```htmlend
 
 ###############################################################################################
-* _
+* go_asm.h
 .image imgs/goasm.png
 
 ###############################################################################################
@@ -588,6 +609,31 @@ const (
 ```htmlend
 
 ###############################################################################################
+* MoreStack 12
+```html
+<pre class="code code18">
+<code class="armasm">
+// var a [1 << 12]byte // 4096 B
+// %fs:0xfffffffffffffff8 => TLS
+	 Dump of assembler code for function main.f:
+   0x0000000000489310 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x0000000000489319 <+9>:	mov    0x10(%rcx),%rsi   <- 0x10(%rcx) 是什麼？
+   0x000000000048931d <+13>:	cmp    $0xfffffffffffffade,%rsi <- 0xfffffffffffffade ?
+   0x0000000000489324 <+20>:	je     0x489372 # main.f+98
+   0x0000000000489326 <+22>:	lea    0x370(%rsp),%rax
+   0x000000000048932e <+30>:	sub    %rsi,%rax
+   0x0000000000489331 <+33>:	cmp    $0x12f8,%rax
+   0x0000000000489337 <+39>:	jbe    0x489372 # main.f+98
+	 ...
+   0x000000000048936a <+90>:	add    $0x1008,%rsp
+   0x0000000000489371 <+97>:	retq   
+   0x0000000000489372 <+98>:	callq  0x44fb30 # runtime.morestack_noctxt
+   0x0000000000489377 <+103>:	jmp    0x489310 # main.f
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
 * _
 ```html
 <p class="slogan slogan-15 bold">是誰把 stackguard0 偷改成 stackPreempt 的</p>
@@ -607,7 +653,7 @@ const (
 	<li>如果太久沒有跑 gc 就跑一下</li>
 	<li>長時間未處理的 netpoll 就拉回來</li>
 	<li>收回因 syscall 長時間阻塞的 P</li>
-	<li>向長時間未禮讓的 goroutine 發出中斷</li>
+	<li>向長時間未禮讓的 goroutine 發出「禮讓」要求</li>
 </ul>
 ```htmlend
 
@@ -670,21 +716,20 @@ func preemptone(_p_ *p) bool {
 ###############################################################################################
 * _
 ```html
-<p class="slogan slogan-10 bold">只要 func 被塞入 morestack 和 cmp</p>
-<p class="slogan bold">就有機會被 sysmon 中斷。</p>
+<p class="slogan slogan-10 bold">只要 func 被塞入 morestack</p>
+<p class="slogan bold">就有機會被 sysmon 要求「禮讓」。</p>
 ```htmlend
 
 ###############################################################################################
 * 總結
 ```html
 <ul>
-  <li>區域變數 >= 4KBi</li>
-	<li>128B <= 區域變數 < 4KBi</li>
+  <li>func 區域變數 >= 128B</li>
 	<ul>
 		<li>有 morestack</li>
 		<li>有可能被插隊</li>
   </ul>
-  <li>區域變數 < 128B</li>
+  <li>func 區域變數 < 128B</li>
 	<ul>
 		<li>不會有 morestack</li>
 		<li>不會被插隊</li>

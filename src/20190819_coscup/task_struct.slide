@@ -9,13 +9,12 @@ Presented by Lee Xun
 ```htmlend
 
 ###############################################################################################
-* Process and Thread
+* 在 Linux, process, thread 都是 task_struct 
 ```html
 <pre class="code code18">
 <code class="c">
 struct task_struct {
 	void				*stack; // kernal stack
-	struct thread_info		thread_info; // context switch 要用的資訊
 	volatile long			state; /* -1 unrunnable, 0 runnable, >0 stopped: */
 	struct mm_struct		*mm; // 指向 virtual memory 區塊
 	struct mm_struct		*active_mm; // 有緣再說
@@ -24,6 +23,15 @@ struct task_struct {
 	struct list_head		children;
 	struct list_head		sibling;
 	/* ... */
+	/* CPU-specific state of this task: */
+	struct thread_struct		thread;
+
+	/*
+	 * WARNING: on x86, 'thread_struct' contains a variable-sized
+	 * structure.  It *MUST* be at the end of 'task_struct'.
+	 *
+	 * Do not put anything below here!
+	 */
 }
 
 	// https://sourcegraph.com/github.com/torvalds/linux/-/blob/include/linux/sched.h#L634
