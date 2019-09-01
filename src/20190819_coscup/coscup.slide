@@ -506,6 +506,20 @@ func main() {
 ```htmlend
 
 ###############################################################################################
+* morestack_noctxt
+```html
+<pre class="code code18">
+<code class="armasm">
+// morestack but not preserving ctxt.
+
+TEXT runtime·morestack_noctxt(SB),NOSPLIT,$0
+	MOVL	$0, DX
+	JMP	runtime·morestack(SB)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
 * morestack 之後呢？
 ```html
 <pre class="code code18">
