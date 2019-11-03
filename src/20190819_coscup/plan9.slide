@@ -1,0 +1,668 @@
+Plan9
+Presented by Lee Xun
+
+###############################################################################################
+* Types of Registers
+```html
+<ul>
+  <li><b>General-purpose registers (GPRs)</b></li>
+  <ul>
+    <li>eax, ecx, edx, ebx, esp, ebp, esi, edi</li>
+    <li>rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8 ~ r15</li>
+  </ul>
+  <li><b>Floating-point registers (FPRs)</b></li>
+  <li><b>Special-purpose registers (SPRs)</b></li>
+  <ul>
+    <li>Constant registers: PI, 1, 0</li>
+    <li>Status registers: Zero, Carry, Overflow, Sign</li>
+  </ul>
+  <li><b>Vector registers SIMD</b></li>
+  <ul>
+    <li>128-bit: XMM0 ~ XMM7</li>
+    <li>extensions: XMM8 ~ XMM15 (only in 64-bit operating mode)</li>
+  </ul>
+</ul>
+```htmlend
+
+###############################################################################################
+* Instruction Move
+```html
+<ul>
+  <li>MOV</li>
+  <ul>
+    <li>movb  (8-bit)</li>
+    <li>movw (16-bit)</li>
+    <li>movl (32-bit)</li>
+    <li>movq (64-bit)</li>
+    <li>mov  (64-bit)</li>
+  </ul>
+</ul>
+```htmlend
+
+###############################################################################################
+* Instruction Move
+```html
+<ul>
+  <li>MOV</li>
+  <li>Addresing Mode</li>
+  <ul>
+    <li>mov  register  -> register</li>
+    <li>mov  immediate -> register</li>
+    <li>mov  immediate -> memory</li>
+    <li>mov  register -> memory</li>
+    <li>mov  memory -> register</li>
+  </ul>
+</ul>
+```htmlend
+.caption 詳細可參考 [[http://www.scs.stanford.edu/05au-cs240c/lab/amd64/AMD64-3.pdf#page=222&zoom=100,0,152"][AMD64 Architecture Programmer's Manual]]
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">ASM in GO: Plan9</p>
+```htmlend
+
+###############################################################################################
+* Plan9 registers
+```html
+<ul>
+  <li>Data registers: R0 ~ R7</li>
+  <li>Address registers: A0 ~ A7</li>
+  <li>Floating-point registers: F0 ~ F7</li>
+  <li>Pseudo-registers: FP, SP, PC, SB</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* Plan9 addressing mode
+.image imgs/asm0.png
+
+###############################################################################################
+* Plan9 procedure, function
+```html
+<pre class="code code22">
+<code class="armasm">
+ 宣告函數   要加上'·'     flag  參數及返回大小
+   |         |           |        | 
+ TEXT pkgname·add(SB),NOSPLIT,$32-32
+       |        |               |
+      package  函数名(SB)     framesize
+</code>
+</pre>
+<ul>
+  <li>'·' 可用中文模式按下 '`' 打出來</li>
+  <li>package name 可省略</li>
+  <li>flag 定義在 textflag.h</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* Plan9 的指令操作方向
+```html
+<pre class="code code22">
+<code class="armasm">
+
+         plan9                            intel 
+           |                                | 
+      MOVQ $0x10, AX                   mov rax, 0x10
+           |------>                         <-----|
+
+
+       ; 和 AT&T 類似                     ; 和 intel 相反
+
+</code>
+</pre>
+```htmlend
+.caption 凡事都以例外，好奇的話請看 [[https://quasilyte.dev/blog/files/x86_2.csv][完整列表]]
+```html
+<ul>
+  <li>gdb 可以用 set disassembly-flavor intel 把他從 AT&T 改顯示 intel</li>
+  <li>為了不讓大家轉換得太辛苦，後面的 gdb 例子都是用 AT&T</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* Plan9 in Golang
+```html
+<ul>
+  <li>Plan9 parse 是用 Go 寫的</li>
+  <li>原始碼在 src/cmd/asm/</li>
+  <li>沿用 Plan9 的精神，但不是 100% 實作</li>
+  <li>工具在這：go tool asm</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Ok we are ready to Go!</p>
+```htmlend
+
+###############################################################################################
+* Deep into Go stack
+```html
+<ul>
+  <li>Argument</li>
+  <li>Return Value</li>
+  <li>Local Variable</li>
+  <li><del>Return Address</del></li>
+  <li><del>Return Base</del>    We don't need to handle them.</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* Argument, Return Value
+```html
+<pre class="code code22">
+<code class="armasm"> 
+ #include "textflag.h"
+ ; main_amd64.s
+ ; func add(a int64, b int64) int64
+ TEXT ·add(SB),NOSPLIT,$0-24
+	 MOVQ	a+0(FP), AX
+	 ADDQ	b+8(FP), AX
+	 MOVQ  AX, ret+16(FP)
+	 RET
+
+ ; a, b, 都只是強制要寫的 symbol，並沒有值
+ ; 其實隨便寫也沒關係，但是用 go vet 的話他會報錯
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">ㄟㄟ</p>
+<p class="slogan bold">那 Go 的多值回傳呢？</p>
+```htmlend
+
+###############################################################################################
+* Multi return value
+```html
+<pre class="code code22">
+<code class="go">
+package main
+
+import "fmt"
+
+func swap(a int64, b int64) (int64, int64)
+
+func main() {
+	var a int64 = 1
+	var b int64 = 99
+	fmt.Printf("%d, %d\n", a, b)
+	a, b = swap(a, b) // how do they work?
+	fmt.Printf("%d, %d\n", a, b)
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Multi return value
+```html
+<pre class="code code22">
+<code class="armasm">
+  #include "textflag.h"
+
+  TEXT ·swap(SB),0,$0-32
+    MOVQ  a+0(FP), AX
+    MOVQ  b+8(FP), BX
+    MOVQ  AX, ret+16(FP)
+    MOVQ  BX, ret1+24(FP)
+    RET
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Multi return value
+```html
+<pre class="code code22">
+<code class="armasm">
+swap: rsp: 0x000000c000076ea0
+  0x0000000000488ca0 <+0>:   mov    0x8(%rsp),%rax
+  0x0000000000488ca5 <+5>:   mov    0x10(%rsp),%rbx
+  0x0000000000488caa <+10>:  mov    %rbx,0x18(%rsp)
+  0x0000000000488caf <+15>:  mov    %rax,0x20(%rsp)
+  0x0000000000488cb4 <+20>:  retq 
+
+main: rsp: 0x000000c000076ea8
+  0x0000000000488b58 <+232>: movq   $0x1,(%rsp)     //0x1  =  1
+  0x0000000000488b60 <+240>: movq   $0x63,0x8(%rsp) //0x63 = 99
+  0x0000000000488b69 <+249>: callq  0x488ca0 //main.swap
+  0x0000000000488b6e <+254>: mov    0x10(%rsp),%rax
+  0x0000000000488b73 <+259>: mov    0x18(%rsp),%rcx
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Multi return value
+```html
+<pre class="code code22">
+<code class="armasm">
+  
+  retq:                 
+  1. retaddr -> rip     
+  2. rsp+=8 ((stack-=8  
+  3. start from rip 
+
+  callq:
+  1. Save rip in 0x0(%rsp)
+  2. rsp+=8 for retaddr
+  3. funcaddr -> rip
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Multi return value
+```html
+<pre class="code code22">
+<code class="armasm">
+    high  +-------+
+          |  ret2 |
+          +-------+ <- 0x20(rsp), r2+24(FP)
+          |  ret1 |
+          +-------+ <- 0x18(rsp), r1+16(FP)
+          |  arg2 |
+          +-------+ <- 0x10(rsp), b+8(FP)
+          |  arg1 |
+          +-------+ <- 0x08(rsp), a+0(FP)
+          | readdr|
+    low   +-------+ <- 0x00(rsp), return addr
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-10 bold">有了參數和回傳值</p>
+<p class="slogan bold">再來就是區域變數</p>
+```htmlend
+
+###############################################################################################
+* Local Variable 1
+```html
+<pre class="code code22">
+<code class="go">
+func swaplocal(a int64, b int64) (int64, int64) {
+	vb := b
+	va := a
+	return vb, va
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Local Variable 2
+```html
+<pre class="code code22">
+<code class="armasm">
+TEXT ·swaplocal(SB),0,$0-32
+	; assign 參數給 local var
+	MOVQ a+0(FP), AX
+	MOVQ AX, va-8(SP)
+	MOVQ b+8(FP), AX
+	MOVQ AX, vb-16(SP)
+	; 將 local var 回給 return val
+	MOVQ vb-16(SP), AX
+	MOVQ AX, ret+16(FP)
+	MOVQ va-8(SP), AX
+	MOVQ AX, ret1+24(FP)
+	RET
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Stack 的長相
+```html
+<pre class="code code22">
+<code class="armasm">
+  high   +-------+
+         |  ret2 |
+         +-------+ <- 0x20(rsp), r2+24(FP)
+         |  ret1 |
+         +-------+ <- 0x18(rsp), r1+16(FP)
+         |  arg2 |
+         +-------+ <- 0x10(rsp), b+8(FP)
+         |  arg1 |
+         +-------+ <- 0x08(rsp), a+0(FP)
+         | readdr|
+         +-------+ <- 0x00(rsp), SP+8
+         |   BP  | // 這個不一定會有，看指令架構
+         +-------+ <- 0x0 SP+0
+         |  loc1 | 
+         +-------+ <- 0x0 SP-8
+         |  loc2 | 
+  low    +-------+ <- 0x0 SP-16
+
+   0x000000c000076eb0 0x0000000000000063               arg2
+   0x000000c000076ea8 0x0000000000000001 <- prev       arg1
+   0x000000c000076ea0 0x0000000000488cb9 <- 0x0(%rsp)  retaddr
+   0x000000c000076e98 0x000000c000076f88 <- 0x8(%rsp)  BP, rbp
+   0x000000c000076e90 0x0000000000000000
+</code>
+</pre>
+```htmlend
+
+* BP enabled or not
+```html
+<pre class="code code22">
+<code class="go">
+// src/cmd/internal/objabi/util.go
+var (
+	framepointer_enabled     int = 1
+	Fieldtrack_enabled       int
+	Preemptibleloops_enabled int
+)
+//...
+func Framepointer_enabled(goos, goarch string) bool {
+	return framepointer_enabled != 0 && (goarch == "amd64" 
+	&& goos != "nacl" || goarch == "arm64" && goos == "linux")
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* Function call
+```html
+<pre class="code code22">
+<code class="armasm">
+            caller
+     high +-------+
+          |  loc..|
+          +-------+ 
+          |  ret..|
+          +-------+ 
+          |  arg..|
+          +-------+ 
+          | readdr|   callee
+          +-------+----------+
+          | readdr|   readdr |
+          +-------+----------+  <- caller FP(pseudo)
+                  | caller BP|  
+                  +----------+  <- 存著 caller 的 rbp
+                  |   loc... |     retq 會拿去還他
+      callee SP ->+----------+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* FP, SP, rbp, rsp
+```html
+<pre class="code code22">
+<code class="armasm">
+  high   +------------+
+         |  rets...   |
+         +------------+
+         |  args...   |
+         +------------+ <- 0(FP)
+         |  retaddr   |
+         +------------+
+         |  caller BP |
+         +------------+ <- 0(SP), 0x0(rbp)
+         |  locs..... |
+         +------------+ 
+         |  rets..... |
+         +------------+ 
+         |  args..... | 
+         +------------+ <- 0x0(rsp)
+         |  retaddr   | 
+  low    +============+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看
+```html
+<pre class="code code22">
+<code class="go">
+package main
+
+func pass(a int64, b int64) (int64, int64) {
+	va := a
+	vb := b
+	return pass(va, vb)
+}
+
+func main() {
+	var a int64 = 1
+	var b int64 = 99
+	a, b = pass(a, b)
+}
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看，開啟優化
+```html
+<pre class="code code18">
+<code class="armasm">
+; go build .
+>>> disas main.pass
+Dump of assembler code for function main.pass:
+   0x000000000044f970 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x000000000044f979 <+9>:	cmp    0x10(%rcx),%rsp
+   0x000000000044f97d <+13>:	jbe    0x44f9c3 <main.pass+83>
+   0x000000000044f97f <+15>:	sub    $0x28,%rsp
+   0x000000000044f983 <+19>:	mov    %rbp,0x20(%rsp)
+   0x000000000044f988 <+24>:	lea    0x20(%rsp),%rbp
+   0x000000000044f98d <+29>:	mov    0x30(%rsp),%rax
+   0x000000000044f992 <+34>:	mov    %rax,(%rsp)
+   0x000000000044f996 <+38>:	mov    0x38(%rsp),%rax
+   0x000000000044f99b <+43>:	mov    %rax,0x8(%rsp)
+   0x000000000044f9a0 <+48>:	callq  0x44f970 <main.pass>
+   0x000000000044f9a5 <+53>:	mov    0x10(%rsp),%rax
+   0x000000000044f9aa <+58>:	mov    0x18(%rsp),%rcx
+   0x000000000044f9af <+63>:	mov    %rax,0x40(%rsp)
+   0x000000000044f9b4 <+68>:	mov    %rcx,0x48(%rsp)
+   0x000000000044f9b9 <+73>:	mov    0x20(%rsp),%rbp
+   0x000000000044f9be <+78>:	add    $0x28,%rsp
+   0x000000000044f9c2 <+82>:	retq   
+   0x000000000044f9c3 <+83>:	callq  0x447880 <runtime.morestack_noctxt>
+   0x000000000044f9c8 <+88>:	jmp    0x44f970 <main.pass>
+End of assembler dump.
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看，開啟優化
+```html
+<pre class="code code18">
+<code class="armasm">
+>>> x/80gx 0x000000c00002e618
+
+; caller
+0xc00002e698:	0x000000c00002e6c8	0x000000000044f9a5
+0xc00002e688:	0x0000000000473848	0x000000c00001e500
+0xc00002e678:	0x0000000000000001	0x0000000000000063 0x30(%rsp), 0x38(%rsp)
+
+; callee
+0xc00002e668:	0x000000c00002e698	0x000000000044f9a5 0x20(%rsp), 0x28(%rsp)
+0xc00002e658:	0x00000000004c6d80	0x00007ffff7fc4b48 0x10(%rsp), 0x20(%rsp)
+0xc00002e648:	0x0000000000000001	0x0000000000000063  <- rsp   , 0x08(%rsp)
+
+; callee's callee
+0xc00002e638:	0x000000c00002e668	0x000000000044f9a5
+0xc00002e628:	0x0000000000002000	0x000000000042559b
+0xc00002e618:	0x0000000000000001	0x0000000000000063
+
+...
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看，開啟優化
+```html
+<pre class="code code18">
+<code class="armasm">
+>>> x/80gx 0x000000c00002e618
+
+; caller
+0xc00002e698:	0x000000c00002e6c8	0x000000000044f9a5
+0xc00002e688:	0x0000000000473848	0x000000c00001e500
+0xc00002e678:	0x0000000000000001	0x0000000000000063 arg1 = 1, arg2 = 99
+
+; callee
+0xc00002e668:	0x000000c00002e698	0x000000000044f9a5 BP, return address
+0xc00002e658:	0x00000000004c6d80	0x00007ffff7fc4b48 ret_val1, ret_val2
+0xc00002e648:	0x0000000000000001	0x0000000000000063 arg1 = 1, arg2 = 99
+
+; callee's callee
+0xc00002e638:	0x000000c00002e668	0x000000000044f9a5
+0xc00002e628:	0x0000000000002000	0x000000000042559b
+0xc00002e618:	0x0000000000000001	0x0000000000000063
+
+...
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">定義的區域變數去哪了？</p>
+```htmlend
+
+###############################################################################################
+* 印出來看看，優化關閉
+```html
+<pre class="code code18">
+<code class="armasm">
+; go build -gcflags="-l -N" .
+
+>>> disas main.pass
+Dump of assembler code for function main.pass:
+   0x0000000000488b20 <+0>:	mov    %fs:0xfffffffffffffff8,%rcx
+   0x0000000000488b29 <+9>:	cmp    0x10(%rcx),%rsp
+   0x0000000000488b2d <+13>:	jbe    0x488bc0 <main.pass+160>
+   0x0000000000488b33 <+19>:	sub    $0x58,%rsp
+   0x0000000000488b37 <+23>:	mov    %rbp,0x50(%rsp)
+   0x0000000000488b3c <+28>:	lea    0x50(%rsp),%rbp
+   0x0000000000488b41 <+33>:	movq   $0x0,0x70(%rsp)
+   0x0000000000488b4a <+42>:	movq   $0x0,0x78(%rsp)
+   0x0000000000488b53 <+51>:	mov    0x60(%rsp),%rax
+   0x0000000000488b58 <+56>:	mov    %rax,0x28(%rsp)
+   0x0000000000488b5d <+61>:	mov    0x68(%rsp),%rax
+   0x0000000000488b62 <+66>:	mov    %rax,0x20(%rsp)
+   0x0000000000488b67 <+71>:	mov    0x28(%rsp),%rcx
+   0x0000000000488b6c <+76>:	mov    %rcx,(%rsp)
+   0x0000000000488b70 <+80>:	mov    %rax,0x8(%rsp)
+   0x0000000000488b75 <+85>:	callq  0x488b20 <main.pass>
+   0x0000000000488b7a <+90>:	mov    0x10(%rsp),%rax
+   0x0000000000488b7f <+95>:	mov    %rax,0x38(%rsp)
+   0x0000000000488b84 <+100>:	mov    0x18(%rsp),%rax
+   0x0000000000488b89 <+105>:	mov    %rax,0x30(%rsp)
+   0x0000000000488b8e <+110>:	mov    0x38(%rsp),%rax
+   0x0000000000488b93 <+115>:	mov    %rax,0x48(%rsp)
+   0x0000000000488b98 <+120>:	mov    0x30(%rsp),%rax
+   0x0000000000488b9d <+125>:	mov    %rax,0x40(%rsp)
+   0x0000000000488ba2 <+130>:	mov    0x48(%rsp),%rax
+   0x0000000000488ba7 <+135>:	mov    %rax,0x70(%rsp)
+   0x0000000000488bac <+140>:	mov    0x40(%rsp),%rax
+   0x0000000000488bb1 <+145>:	mov    %rax,0x78(%rsp)
+   0x0000000000488bb6 <+150>:	mov    0x50(%rsp),%rbp
+   0x0000000000488bbb <+155>:	add    $0x58,%rsp
+   0x0000000000488bbf <+159>:	retq
+   0x0000000000488bc0 <+160>:	callq  0x44f340 <runtime.morestack_noctxt>
+   0x0000000000488bc5 <+165>:	jmpq   0x488b20 <main.pass>
+End of assembler dump.
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看，優化關閉
+```html
+<pre class="code code18">
+<code class="armasm">
+>>> x/80gx 0x000000c000076c08
+
+0xc000076cd8:	0x0000000000000000	0x0000000000000000 0x70(%rsp) 0x78(%rsp)
+0xc000076cc8:	0x0000000000000001	0x0000000000000063 0x60(%rsp) 0x68(%rsp)
+
+0xc000076cb8:	0x000000c000076d18	0x0000000000488b7a 0x50(%rsp) 0x58(%rsp)
+0xc000076ca8:	0x0000000000427561	0x00000000004c1e78 0x40(%rsp) 0x48(%rsp)
+0xc000076c98:	0x000000000047affa	0x000000c000076ce8 0x30(%rsp) 0x38(%rsp)
+0xc000076c88:	0x0000000000000063	0x0000000000000001 0x20(%rsp) 0x28(%rsp)
+0xc000076c78:	0x0000000000000000	0x0000000000000000 0x10(%rsp) 0x10(%rsp)
+0xc000076c68:	0x0000000000000001	0x0000000000000063  <- rsp    0x08(%rsp)
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看，優化關閉
+```html
+<pre class="code code18">
+<code class="armasm">
+>>> x/80gx 0x000000c000076c08
+
+0xc000076cd8:	0x0000000000000000	0x0000000000000000 ret1, ret2
+0xc000076cc8:	0x0000000000000001	0x0000000000000063 arg1, arg2
+
+0xc000076cb8:	0x000000c000076d18	0x0000000000488b7a BP, retaddr
+0xc000076ca8:	0x0000000000427561	0x00000000004c1e78 ???  這啥？
+0xc000076c98:	0x000000000047affa	0x000000c000076ce8 ???
+0xc000076c88:	0x0000000000000063	0x0000000000000001 loc2, loc1
+0xc000076c78:	0x0000000000000000	0x0000000000000000 ret3, ret4
+0xc000076c68:	0x0000000000000001	0x0000000000000063 arg3, arg4
+
+</code>
+</pre>
+```htmlend
+
+###############################################################################################
+* 印出來看看，優化關閉
+```html
+<pre class="code code18">
+<code class="armasm">
+>>> x/80gx 0x000000c000076c08
+
+0xc000076cd8:	0x0000000000000000	0x0000000000000000 ret1, ret2
+0xc000076cc8:	0x0000000000000001	0x0000000000000063 arg1, arg2
+
+0xc000076cb8:	0x000000c000076d18	0x0000000000488b7a BP, retaddr
+0xc000076ca8:	0x0000000000427561	0x00000000004c1e78 ???  這啥？
+0xc000076c98:	0x000000000047affa	0x000000c000076ce8 ???
+0xc000076c88:	0x0000000000000063	0x0000000000000001 loc2, loc1
+0xc000076c78:	0x0000000000000000	0x0000000000000000 ret3, ret4
+0xc000076c68:	0x0000000000000001	0x0000000000000063 arg3, arg4
+
+</code>
+</pre>
+<ul>
+  <li>ret3 -> 0x30(%rsp) -> 0x40(%rsp) -> 0x78(%rsp) ret1</li>
+  <li>ret4 -> 0x38(%rsp) -> 0x48(%rsp) -> 0x70(%rsp) ret2</li>
+</ul>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">Ok 我的眼睛需要休息一下</p>
+```htmlend
+
+###############################################################################################
+* _
+```html
+<p class="slogan slogan-15 bold">blog.leexun.tw</p>
+```htmlend
