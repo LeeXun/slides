@@ -1,0 +1,1 @@
+The deadloop example presented in my 2019 talks has been deprecated since the upgrade in go1.15 [ref: https://github.com/golang/go/issues/10958](https://github.com/golang/go/issues/10958). I will still keep the content just for reference :)
